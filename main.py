@@ -3,23 +3,26 @@ import pickle
 import pandas as pd
 import numpy as np
 import os
-
-app = FastAPI()
-
-def to_float32(X):
-    return X.astype(np.float32)
-
+from fastapi.responses import JSONResponse
+from fastapi import HTTPException
 import __main__
-__main__.to_float32 = to_float32
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODEL_PATH = os.path.join(BASE_DIR, "rf_grid_model.pkl")
 CSV_PATH = os.path.join(BASE_DIR, "noshowappointments.csv")
+HARDCODED_PATIENT_ID = 41799315536436
+
+app = FastAPI()
+
+df_appointments = pd.read_csv(CSV_PATH)
+
+def to_float32(X):
+    return X.astype(np.float32)
+
+__main__.to_float32 = to_float32
 
 with open(MODEL_PATH, "rb") as f:
     model = pickle.load(f)
-
-df_appointments = pd.read_csv(CSV_PATH)
 
 def extract_features_from_row(row):
     scheduled_day = pd.to_datetime(row['ScheduledDay'])
@@ -93,10 +96,6 @@ async def predict(patient_id):
         "probability_no_show": float(probability[0][1])
     }
 
-
-from fastapi.responses import JSONResponse
-from fastapi import HTTPException
-
 def convert_to_native_types(data):
     if isinstance(data, dict):
         return {key: convert_to_native_types(value) for key, value in data.items()}
@@ -106,7 +105,6 @@ def convert_to_native_types(data):
         return data.item()
     return data
 
-HARDCODED_PATIENT_ID = 41799315536436
 @app.get("/predict")
 async def get_prediction():
     try:
