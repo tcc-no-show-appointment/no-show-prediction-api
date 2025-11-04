@@ -10,7 +10,7 @@ import __main__
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODEL_PATH = os.path.join(BASE_DIR, "rf_grid_model.pkl")
 CSV_PATH = os.path.join(BASE_DIR, "noshowappointments.csv")
-HARDCODED_PATIENT_ID = 41799315536436
+HARDCODED_PATIENT_ID = 622257462899397
 
 app = FastAPI()
 
