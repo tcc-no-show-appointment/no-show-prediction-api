@@ -49,9 +49,12 @@ jobs:
         uses: azure/container-apps-deploy-action@v2
         with:
           appSourcePath: ${{ github.workspace }}
+          acrUsername: ${{ secrets.NOSHOWAPPOINTMENT_REGISTRY_USERNAME }}
+          acrPassword: ${{ secrets.NOSHOWAPPOINTMENT_REGISTRY_PASSWORD }}
           containerAppName: noshowappointment
           resourceGroup: resources
           imageToDeploy: noshowappointment.azurecr.io/modelprediction:${{ github.sha }}
+
 
 
 
