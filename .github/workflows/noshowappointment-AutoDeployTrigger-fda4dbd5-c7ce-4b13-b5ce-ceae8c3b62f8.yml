@@ -38,13 +38,14 @@ jobs:
           _dockerfilePathKey_: _dockerfilePath_
           _targetLabelKey_: _targetLabel_
           registryUrl: noshowappointment.azurecr.io
-          registryUsername: ${{ secrets.NOSHOWAPPOINTMENT_REGISTRY_USERNAME }}
-          registryPassword: ${{ secrets.NOSHOWAPPOINTMENT_REGISTRY_PASSWORD }}
+          acrUsername: ${{ secrets.NOSHOWAPPOINTMENT_REGISTRY_USERNAME }}
+          acrPassword: ${{ secrets.NOSHOWAPPOINTMENT_REGISTRY_PASSWORD }}
           containerAppName: noshowappointment
           resourceGroup: resources
           imageToBuild: default/noshowappointment:${{ github.sha }}
           _buildArgumentsKey_: |
             _buildArgumentsValues_
+
 
 
 
