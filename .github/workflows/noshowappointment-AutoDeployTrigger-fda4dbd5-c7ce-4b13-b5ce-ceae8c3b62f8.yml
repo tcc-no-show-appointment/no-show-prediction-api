@@ -35,14 +35,10 @@ jobs:
         uses: azure/container-apps-deploy-action@v2
         with:
           appSourcePath: ${{ github.workspace }}
-          _dockerfilePathKey_: _dockerfilePath_
-          _targetLabelKey_: _targetLabel_
           registryUrl: noshowappointment.azurecr.io
           containerAppName: noshowappointment
           resourceGroup: resources
           imageToBuild: default/noshowappointment:${{ github.sha }}
-          _buildArgumentsKey_: |
-            _buildArgumentsValues_
 
 
 
