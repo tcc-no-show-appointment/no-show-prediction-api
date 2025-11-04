@@ -37,7 +37,7 @@ jobs:
           appSourcePath: ${{ github.workspace }}
           _dockerfilePathKey_: _dockerfilePath_
           _targetLabelKey_: _targetLabel_
-          registryUrl: 
+          registryUrl: noshowappointment.azurecr.io
           registryUsername: ${{ secrets.NOSHOWAPPOINTMENT_REGISTRY_USERNAME }}
           registryPassword: ${{ secrets.NOSHOWAPPOINTMENT_REGISTRY_PASSWORD }}
           containerAppName: noshowappointment
@@ -45,5 +45,6 @@ jobs:
           imageToBuild: default/[parameters('containerAppName')]:${{ github.sha }}
           _buildArgumentsKey_: |
             _buildArgumentsValues_
+
 
 
