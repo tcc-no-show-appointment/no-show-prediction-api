@@ -42,9 +42,10 @@ jobs:
           registryPassword: ${{ secrets.NOSHOWAPPOINTMENT_REGISTRY_PASSWORD }}
           containerAppName: noshowappointment
           resourceGroup: resources
-          imageToBuild: default/[parameters('containerAppName')]:${{ github.sha }}
+          imageToBuild: default/noshowappointment:${{ github.sha }}
           _buildArgumentsKey_: |
             _buildArgumentsValues_
+
 
 
 
