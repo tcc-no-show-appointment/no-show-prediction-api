@@ -47,13 +47,13 @@ jobs:
       - name: Deploy to Azure Container Apps
         uses: azure/container-apps-deploy-action@v2
         with:
-          appSourcePath: ${{ github.workspace }}
-          registryUrl: docker.io/guigarciag/modelprediction
+          registryUrl: docker.io
           registryUsername: ${{ secrets.DOCKERHUB_USERNAME }}
           registryPassword: ${{ secrets.DOCKERHUB_PASSWORD }}
           containerAppName: noshowappointment
           resourceGroup: resources
           imageToDeploy: guigarciag/modelprediction:${{ github.sha }}
+
 
 
 
