@@ -31,29 +31,30 @@ jobs:
           tenant-id: ${{ secrets.NOSHOWAPPOINTMENT_AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.NOSHOWAPPOINTMENT_AZURE_SUBSCRIPTION_ID }}
 
-      - name: Log in to ACR
+      - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with: 
-          registry: noshowappointment.azurecr.io
-          username: ${{ secrets.NOSHOWAPPOINTMENT_REGISTRY_USERNAME }}
-          password: ${{ secrets.NOSHOWAPPOINTMENT_REGISTRY_PASSWORD }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_USERNAME }}
       
-      - name: Build and push container to ACR
+      - name: Build and push container to Docker Hub
         uses: docker/build-push-action@v6
         with:
           push: true
-          tags: noshowappointment.azurecr.io/modelprediction:${{ github.sha }}
+          tags: guigarciag/modelprediction:${{ github.sha }}
           file: ./Dockerfile
       
       - name: Deploy to Azure Container Apps
         uses: azure/container-apps-deploy-action@v2
         with:
           appSourcePath: ${{ github.workspace }}
-          acrUsername: ${{ secrets.NOSHOWAPPOINTMENT_REGISTRY_USERNAME }}
-          acrPassword: ${{ secrets.NOSHOWAPPOINTMENT_REGISTRY_PASSWORD }}
+          registryUrl: docker.io/guigarciag/modelprediction:${{ github.sha }}
+          registryUsername: ${{ secrets.DOCKERHUB_USERNAME }}
+          registryPassword: ${{ secrets.DOCKERHUB_PASSWORD }}
           containerAppName: noshowappointment
           resourceGroup: resources
-          imageToDeploy: noshowappointment.azurecr.io/modelprediction:${{ github.sha }}
+          imageToDeploy: guigarciag/modelprediction:${{ github.sha }}
+
 
 
 
