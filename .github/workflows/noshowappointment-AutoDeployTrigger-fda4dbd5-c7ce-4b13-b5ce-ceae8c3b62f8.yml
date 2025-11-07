@@ -50,9 +50,10 @@ jobs:
           registryUrl: docker.io
           registryUsername: ${{ secrets.DOCKERHUB_USERNAME }}
           registryPassword: ${{ secrets.DOCKERHUB_PASSWORD }}
-          containerAppName: noshowappointment
+          containerAppName: noshowappointmentpublic
           resourceGroup: resources
           imageToDeploy: guigarciag/modelprediction:${{ github.sha }}
+
 
 
 
