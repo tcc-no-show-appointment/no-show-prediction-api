@@ -3,26 +3,49 @@ import pickle
 import pandas as pd
 import numpy as np
 import os
+import requests
+import io
 from fastapi.responses import JSONResponse
 from fastapi import HTTPException
 import __main__
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-MODEL_PATH = os.path.join(BASE_DIR, "rf_grid_model.pkl")
-CSV_PATH = os.path.join(BASE_DIR, "noshowappointments.csv")
+CSV_URL = "https://devstoragecenter.blob.core.windows.net/devconteiner/noshowappointments.csv"
+MODEL_URL = "https://devstoragecenter.blob.core.windows.net/devconteiner/rf_grid_model.pkl"
 HARDCODED_PATIENT_ID = 7542951368435
 
 app = FastAPI()
 
-df_appointments = pd.read_csv(CSV_PATH)
+def load_csv_from_url(url):
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+        csv_data = io.StringIO(response.text)
+        return pd.read_csv(csv_data)
+    except requests.RequestException as e:
+        raise Exception(f"Failed to download CSV from URL: {e}")
+    except pd.errors.ParserError as e:
+        raise Exception(f"Failed to parse CSV data: {e}")
+
+df_appointments = load_csv_from_url(CSV_URL)
 
 def to_float32(X):
     return X.astype(np.float32)
 
 __main__.to_float32 = to_float32
 
-with open(MODEL_PATH, "rb") as f:
-    model = pickle.load(f)
+def load_model_from_url(url):
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+        model_data = io.BytesIO(response.content)
+        return pickle.load(model_data)
+    except requests.RequestException as e:
+        raise Exception(f"Failed to download model from URL: {e}")
+    except pickle.PickleError as e:
+        raise Exception(f"Failed to load model from downloaded data: {e}")
+
+model = load_model_from_url(MODEL_URL)
 
 def extract_features_from_row(row):
     scheduled_day = pd.to_datetime(row['ScheduledDay'])
