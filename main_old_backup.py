@@ -1,3 +1,27 @@
+"""
+⚠️ THIS FILE IS A BACKUP OF THE ORIGINAL main.py ⚠️
+
+This file has been renamed and preserved for reference.
+The application has been reorganized into a modular structure.
+
+🔄 MIGRATION GUIDE:
+- Original logic is now in: app/main.py (entry point)
+- Configuration moved to: app/config.py
+- Constants moved to: app/constants.py
+- Blob service functions in: app/services/blob_service.py
+- Model loading in: app/services/model_loader.py
+- Feature extraction in: app/utils/preprocessing.py
+- Prediction logic in: app/services/prediction_service.py
+- API routes in: app/routes/prediction_routes.py
+- Schemas in: app/models/schemas.py
+
+To run the new structure:
+  uvicorn app.main:app --host 0.0.0.0 --port 80
+
+The Dockerfile has been updated automatically.
+All functionality remains the same - only the organization has changed.
+"""
+
 from fastapi import FastAPI
 import pickle
 import pandas as pd
