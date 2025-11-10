@@ -5,3 +5,5 @@ uvicorn
 imblearn
 category_encoders
 requests
+pydantic
+python-dotenv
