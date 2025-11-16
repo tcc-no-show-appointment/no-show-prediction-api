@@ -7,3 +7,6 @@ category_encoders
 requests
 pydantic
 python-dotenv
+pytest
+pytest-cov
+joblib
