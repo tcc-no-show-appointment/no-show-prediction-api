@@ -1,0 +1,9 @@
+fastapi
+pandas
+numpy
+uvicorn
+imblearn
+category_encoders
+requests
+pydantic
+python-dotenv
