@@ -5,7 +5,7 @@ on:
   # Automatically trigger it when detected changes in repo
   push:
     branches: 
-      [ develop ]
+      [ main ]
     paths:
     - '**'
     - '.github/workflows/noshowappointment-AutoDeployTrigger-fda4dbd5-c7ce-4b13-b5ce-ceae8c3b62f8.yml'
@@ -53,6 +53,7 @@ jobs:
           containerAppName: noshowappointmentpublic
           resourceGroup: resources
           imageToDeploy: guigarciag/modelprediction:${{ github.sha }}
+
 
 
 
