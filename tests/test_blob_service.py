@@ -1,3 +1,7 @@
+
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import pytest
 from app.services.blob_service import load_joblib_from_url
 from app.config import Config
