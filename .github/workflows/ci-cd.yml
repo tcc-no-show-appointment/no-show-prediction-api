@@ -155,6 +155,8 @@ jobs:
           push: true
           tags: guigarciag/modelprediction:${{ github.sha }}
           file: ./Dockerfile
+          build-args: |
+            GH_TOKEN=${{ secrets.GH_TOKEN }}
       
       - name: Deploy to Azure Container Apps
         uses: azure/container-apps-deploy-action@v2
