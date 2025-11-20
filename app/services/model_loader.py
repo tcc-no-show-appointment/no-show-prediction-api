@@ -9,7 +9,6 @@ logger = get_logger(__name__)
 def to_float32(X):
     return X.astype(np.float32)
 
-# Register to_float32 in __main__ for joblib compatibility
 __main__.to_float32 = to_float32
 
 def load_model():

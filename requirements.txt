@@ -2,11 +2,12 @@ fastapi
 pandas
 numpy
 uvicorn
-imblearn
-category_encoders
 requests
 pydantic
 python-dotenv
 pytest
-pytest-cov
+pytest-asyncio
+httpx
 joblib
+scikit-learn
+git+https://github.com/tcc-no-show-appointment/noshow_lib.git@main
