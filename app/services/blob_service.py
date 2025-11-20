@@ -8,7 +8,7 @@ logger = get_logger(__name__)
 def load_joblib_from_url(url: str):
     try:
         logger.info(f"Downloading joblib file from: {url}")
-        response = requests.get(url)
+        response = requests.get(url, timeout=10)
         response.raise_for_status()
         model_data = io.BytesIO(response.content)
         obj = joblib.load(model_data)
