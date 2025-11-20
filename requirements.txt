@@ -10,3 +10,4 @@ pytest-asyncio
 httpx
 joblib
 scikit-learn
+git+https://<GH_TOKEN>@github.com/tcc-no-show-appointment/noshow_lib.git@main
