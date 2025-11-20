@@ -1,15 +1,2 @@
-WAITING_DAYS_BINS = [-1, 0, 3, 7, 14, 10**9]
-WAITING_DAYS_LABELS = ["wait_0", "wait_1_3", "wait_4_7", "wait_8_14", "wait_15p"]
-
-DAY_PART_MORNING_START = 6
-DAY_PART_MORNING_END = 12
-DAY_PART_AFTERNOON_END = 18
-
-WEEKEND_START = 5
-
 PREDICTION_LABEL_SHOW = "Show"
 PREDICTION_LABEL_NO_SHOW = "No-show"
-
-BLOB_CONTAINER_NAME = "devconteiner"
-CSV_FILENAME = "noshowappointments.csv"
-MODEL_FILENAME = "rf_grid_model.pkl"
