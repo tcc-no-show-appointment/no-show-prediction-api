@@ -153,7 +153,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           push: true
-          tags: guigarciag/modelprediction:${{ github.sha }}
+          tags: ${{ secrets.CONTAINER_IMAGE_NAME }}:${{ github.sha }}
           file: ./Dockerfile
       
       - name: Deploy to Azure Container Apps
@@ -162,9 +162,9 @@ jobs:
           registryUrl: docker.io
           registryUsername: ${{ secrets.DOCKERHUB_USERNAME }}
           registryPassword: ${{ secrets.DOCKERHUB_PASSWORD }}
-          containerAppName: noshowappointmentpublic
+          containerAppName: ${{ secrets.CONTAINER_APP_NAME }}
           resourceGroup: resources
-          imageToDeploy: guigarciag/modelprediction:${{ github.sha }}
+          imageToDeploy: ${{ secrets.CONTAINER_IMAGE_NAME }}:${{ github.sha }}
 
 
 
