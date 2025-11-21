@@ -5,8 +5,17 @@ WORKDIR /app
 # Copiar apenas os arquivos de requisitos primeiro para aproveitar o cache de camadas do Docker
 COPY requirements.txt .
 
-# Instalar dependências
-RUN pip install --no-cache-dir -r requirements.txt
+# Replace token placeholder with build arg
+ARG GH_TOKEN
+RUN sed -i "s|<GH_TOKEN>|${GH_TOKEN}|g" requirements.txt
+
+# Install git, install dependencies, then remove git to keep image small
+RUN apt-get update && \
+    apt-get install -y git && \
+    pip install --no-cache-dir -r requirements.txt && \
+    apt-get purge -y git && \
+    apt-get autoremove -y && \
+    rm -rf /var/lib/apt/lists/*
 
 # Copiar o restante dos arquivos da aplicação
 COPY . .
