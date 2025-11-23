@@ -157,6 +157,7 @@ jobs:
           file: ./Dockerfile
           build-args: |
             GH_TOKEN=${{ secrets.GH_TOKEN }}
+            ENVIRONMENT=${{ github.ref == 'refs/heads/develop' && 'develop' || github.ref == 'refs/heads/homolog' && 'homolog' || 'prod' }}
       
       - name: Deploy to Azure Container Apps
         uses: azure/container-apps-deploy-action@v2
