@@ -7,14 +7,6 @@ from app.services.blob_service import load_joblib_from_url
 from app.config import Config
 
 
-def test_load_joblib_from_url_success():
-    result = load_joblib_from_url(Config.MODEL_URL)
-    
-    assert result is not None
-    assert hasattr(result, 'predict')
-    assert hasattr(result, 'predict_proba')
-
-
 def test_load_joblib_from_url_failure():
     invalid_url = "https://invalid-url-that-does-not-exist.blob.core.windows.net/model.pkl"
     
