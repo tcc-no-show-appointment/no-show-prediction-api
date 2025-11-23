@@ -28,7 +28,10 @@ async def predict(raw_data: Dict[str, Any]) -> Dict[str, Any]:
         logger.info("Engineering features with noshow_lib")
         features = build_features(processed_data, {"target_column": "No-show"})
         logger.info(f"Features shape: {features.shape}, columns: {list(features.columns)}")
-        
+
+        features['previous_appointments_count'] = 0
+        logger.info("Added 'previous_appointments_count' column with default 0")
+
         if 'No-show' in features.columns:
             features = features.drop(columns=['No-show'])
             logger.info("Dropped target column from features")
