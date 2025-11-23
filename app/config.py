@@ -17,5 +17,5 @@ class Config:
     # Model URL can be set explicitly or constructed from environment
     MODEL_URL = os.getenv(
         "MODEL_URL", 
-        f"{BLOB_STORAGE_URL}/models/noshow_model_{ENVIRONMENT}.joblib"
+        f"{BLOB_STORAGE_URL}/noshow_model_{ENVIRONMENT}.joblib"
     )
