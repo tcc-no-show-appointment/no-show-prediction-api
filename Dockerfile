@@ -15,7 +15,7 @@ COPY requirements.txt .
 # Install git, configure credentials, install dependencies, then cleanup
 RUN --mount=type=secret,id=gh_token \
     apt-get update && \
-    apt-get install -y git && \
+    apt-get install -y git libgomp1 && \
     GH_TOKEN=$(cat /run/secrets/gh_token 2>/dev/null || echo "${GH_TOKEN}") && \
     git config --global url."https://${GH_TOKEN}@github.com/".insteadOf "https://github.com/" && \
     pip install --no-cache-dir -r requirements.txt && \

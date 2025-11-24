@@ -10,4 +10,7 @@ pytest-asyncio
 httpx
 joblib
 scikit-learn==1.7.2
+lightgbm==4.5.0
+xgboost==2.1.1
+category-encoders==2.6.3
 git+https://github.com/tcc-no-show-appointment/noshow_lib.git@main
