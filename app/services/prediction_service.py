@@ -22,7 +22,7 @@ async def predict(raw_data: Dict[str, Any]) -> Dict[str, Any]:
             df['No-show'] = 'No'
         
         logger.info("Processing data with noshow_lib")
-        processed_data = load_and_process_data(df)
+        processed_data = load_and_process_data(df, is_external_access=True)
         logger.info(f"Processed data shape: {processed_data.shape}")
         
         logger.info("Engineering features with noshow_lib")
