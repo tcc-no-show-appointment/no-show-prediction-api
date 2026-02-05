@@ -141,3 +141,50 @@ class BlobStorageClient:
         except Exception as e:
             logger.error(f"Error downloading newest versioned model: {str(e)}")
             return None
+    
+    def download_config_file(
+        self,
+        folder: str = "model_configuration",
+        filename: str = "prod.yaml"
+    ) -> Optional[str]:
+        """
+        Download configuration file from blob storage.
+        
+        Args:
+            folder: Folder name in blob storage (default: 'model_configuration')
+            filename: Name of the config file (default: 'prod.yaml')
+            
+        Returns:
+            Configuration file content as string, or None if download fails
+        """
+        blob_path = f"{folder}/{filename}"
+        
+        try:
+            logger.info(f"Downloading config file from: {blob_path}")
+            
+            if self.blob_service_client:
+                blob_client = self.blob_service_client.get_blob_client(
+                    container=self.container_name,
+                    blob=blob_path
+                )
+                
+                download_stream = blob_client.download_blob()
+                config_bytes = download_stream.readall()
+                config_content = config_bytes.decode('utf-8')
+                logger.info(f"Successfully downloaded config file ({len(config_bytes)} bytes) using Azure SDK")
+                return config_content
+            else:
+                blob_url = f"https://{self.account_name}.blob.core.windows.net/{self.container_name}/{blob_path}"
+                logger.info(f"Attempting public URL download: {blob_url}")
+                response = requests.get(blob_url, timeout=30)
+                response.raise_for_status()
+                config_content = response.text
+                logger.info(f"Successfully downloaded config file ({len(config_content)} bytes) via public URL")
+                return config_content
+                
+        except AzureError as e:
+            logger.error(f"Azure error downloading config file: {str(e)}")
+            return None
+        except Exception as e:
+            logger.error(f"Error downloading config file from {blob_path}: {str(e)}")
+            return None

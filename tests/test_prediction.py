@@ -10,19 +10,22 @@ from app.main import app
 
 
 # def test_successful_prediction():
-#     """Test real end-to-end prediction with valid input"""
+#     """Test real end-to-end prediction with valid input using Portuguese column names"""
 #     request_data = {
-#         "Age": 62,
-#         "Gender": "F",
-#         "ScheduledDay": "2024-11-16T08:00:00",
-#         "AppointmentDay": "2024-11-23T14:00:00",
-#         "Neighbourhood": "JARDIM CAMBURI",
-#         "Scholarship": 0,
-#         "Hipertension": 1,
-#         "Diabetes": 0,
-#         "Alcoholism": 0,
-#         "Handcap": 0,
-#         "SMS_received": 1
+#        "id": 5642903,
+#        "Marcacao": "2024-11-16T08:00:00",
+#        "Status": "Realizado",
+#        "DataHoraConsulta": "2024-11-23T14:00:00",
+#        "Idade": 62,
+#        "Sexo": "F",
+#        "CidadePaciente": "SAO PAULO",
+#        "BairroPaciente": "BELA VISTA",
+#        "TipoConvenio": "Enfermaria",
+#        "idUnicoPaciente": "ID369425000",
+#        "UnidadeAtendimento": "CAMPO BELO",
+#        "EnderecoUnidadeAtendimento": "RUA VIEIRA DE MORAES",
+#        "CEPUnidadeAtendimento": "04617-015",
+#        "Especialidade": "CARDIOLOGIA"
 #     }
     
 #     response = client.post("/predict", json=request_data)
@@ -38,7 +41,7 @@ from app.main import app
 
 # def test_prediction_validation_error():
 #     """Test validation error with missing required fields"""
-#     request_data = {"Age": 45}
+#     request_data = {"Idade": 45}
     
 #     response = client.post("/predict", json=request_data)
 #     assert response.status_code == 422
