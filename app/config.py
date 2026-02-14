@@ -1,4 +1,5 @@
 import os
+from typing import Optional
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -8,14 +9,9 @@ class Config:
     
     ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
     
-    # Default blob storage configuration
-    BLOB_STORAGE_URL = os.getenv(
-        "BLOB_STORAGE_URL", 
-        "https://devstoragecenter.blob.core.windows.net/devconteiner"
-    )
+    # Azure Blob Storage credentials
+    AZURE_STORAGE_CONNECTION_STRING: Optional[str] = os.getenv("AZURE_STORAGE_CONNECTION_STRING")
+    AZURE_STORAGE_ACCOUNT_NAME = os.getenv("AZURE_STORAGE_ACCOUNT_NAME", "devstoragecenter")
+    AZURE_STORAGE_ACCOUNT_KEY = os.getenv("AZURE_STORAGE_ACCOUNT_KEY")
+    AZURE_BLOB_CONTAINER_NAME = os.getenv("AZURE_BLOB_CONTAINER_NAME", "devconteiner")
     
-    # Model URL can be set explicitly or constructed from environment
-    MODEL_URL = os.getenv(
-        "MODEL_URL", 
-        f"{BLOB_STORAGE_URL}/noshow_model_{ENVIRONMENT}.joblib"
-    )

@@ -7,4 +7,6 @@ python-dotenv
 pytest
 pytest-asyncio
 httpx
-git+https://github.com/tcc-no-show-appointment/noshow_lib.git@v0.1.4
+azure-storage-blob
+pyyaml
+git+https://github.com/tcc-no-show-appointment/noshow_lib.git@v0.2.1

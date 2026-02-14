@@ -19,7 +19,7 @@ router = APIRouter()
 async def get_prediction(request: PredictionRequest):
     """Predict whether a patient will show up for their appointment"""
     try:
-        logger.info(f"Received prediction request for patient {request.PatientId}")
+        logger.info(f"Received prediction request for patient {request.idUnicoPaciente} (appointment {request.id})")
         result = await predict(request.model_dump())
         return JSONResponse(status_code=200, content=result)
         

@@ -7,7 +7,7 @@ FastAPI-based prediction service that predicts patient no-shows for medical appo
 ## Architecture Flow
 
 ```
-Request → API Route → Prediction Service → noshow_lib → Model → Response
+Request → API Route → Prediction Service → Config (Blob Storage) → build_features → Model → Response
 ```
 
 ## File Structure & Responsibilities
@@ -16,34 +16,42 @@ Request → API Route → Prediction Service → noshow_lib → Model → Respon
 
 - **`main.py`**: FastAPI app initialization and health endpoint
 - **`routes/prediction_routes.py`**: `/predict` endpoint handler
-- **`models/schemas.py`**: Pydantic request/response models
+- **`models/schemas.py`**: Pydantic request/response models (Portuguese column names)
 
 ### **Service Layer**
 
 - **`services/prediction_service.py`**: Main prediction pipeline
-  - Converts request to DataFrame
-  - Calls `noshow_lib` for data processing & feature engineering
+  - Downloads prod.yaml configuration from blob storage
+  - Converts request to DataFrame (Portuguese columns)
+  - Calls `build_features()` from noshow_lib for feature engineering
+  - Filters features based on config
   - Loads model and makes prediction
 - **`services/model_loader.py`**: Model caching singleton
   - Downloads model from Azure Blob on first call
   - Caches in memory for subsequent requests
-- **`services/blob_service.py`**: Downloads joblib files from URLs
+- **`services/blob_service.py`**: Downloads files from Azure Blob Storage
+  - Model files (.joblib)
+  - Configuration files (prod.yaml)
 
 ### **Configuration**
 
-- **`config.py`**: Environment variables (MODEL_URL)
+- **`config.py`**: Environment variables (Azure credentials, model URL)
 - **`constants.py`**: Static labels (Show/No-show)
 - **`utils/logger.py`**: Logging configuration
+- **`prod.yaml`**: Feature engineering config (downloaded from blob storage)
 
 ## Data Flow
 
-1. **Input**: Patient data (Age, Gender, AppointmentDay, etc.)
-2. **Processing**:
-   - Add required columns (AppointmentID, No-show placeholder)
-   - `load_and_process_data()` - handles missing values, type casting
-   - `build_features()` - creates ML features (waiting_days, age_group, etc.)
-3. **Prediction**: Model predicts probability of no-show
-4. **Output**: Prediction class (0/1) + probabilities
+1. **Input**: Patient data with Portuguese column names (id, Status, Marcacao, DataHoraConsulta, Idade, Sexo, CidadePaciente, BairroPaciente, TipoConvenio, idUnicoPaciente, UnidadeAtendimento, EnderecoUnidadeAtendimento, CEPUnidadeAtendimento, Especialidade)
+2. **Configuration**: Download prod.yaml from blob storage (model_configuration folder)
+3. **Processing**:
+   - `build_features()` - handles column mapping, feature engineering
+   - Creates temporal features (waiting_days, weekday, hour, cyclical encodings)
+   - Creates patient history features (no_show_rate, previous appointments)
+   - Creates contextual features (unit/specialty rates, holidays)
+4. **Feature Selection**: Filter to model-expected features from config
+5. **Prediction**: Model predicts probability of no-show
+6. **Output**: Prediction class (0/1) + probabilities
 
 ## Test Strategy
 
