@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from app.routes.prediction_routes import router as prediction_router
+from app.routes.appointment_routes import router as appointment_router
 from app.services.model_manager import model_manager
 from app.utils.logger import get_logger
 
@@ -41,6 +42,7 @@ app = FastAPI(
 )
 
 app.include_router(prediction_router, tags=["predictions"])
+app.include_router(appointment_router, tags=["appointments"])
 
 @app.get("/", tags=["health"])
 async def root():

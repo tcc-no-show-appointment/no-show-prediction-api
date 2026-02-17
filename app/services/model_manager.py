@@ -12,7 +12,7 @@ import yaml
 from typing import Optional, Dict, Any
 import __main__
 from app.services.blob_service import BlobStorageClient
-from app.config import Config
+from app.config import config
 from app.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -37,6 +37,7 @@ class ModelManager:
     _instance: Optional['ModelManager'] = None
     _model: Optional[Any] = None
     _config: Optional[Dict[str, Any]] = None
+    _model_name: Optional[str] = None  # Track which blob file was loaded
     
     def __new__(cls):
         if cls._instance is None:
@@ -55,33 +56,37 @@ class ModelManager:
         try:
             # Initialize blob client
             blob_client = BlobStorageClient(
-                connection_string=getattr(Config, 'AZURE_STORAGE_CONNECTION_STRING', None),
-                account_name=getattr(Config, 'AZURE_STORAGE_ACCOUNT_NAME', None),
-                account_key=getattr(Config, 'AZURE_STORAGE_ACCOUNT_KEY', None),
-                container_name=getattr(Config, 'AZURE_BLOB_CONTAINER_NAME', 'devconteiner')
+                connection_string=config.AZURE_STORAGE_CONNECTION_STRING,
+                account_name=config.AZURE_STORAGE_ACCOUNT_NAME,
+                account_key=config.AZURE_STORAGE_ACCOUNT_KEY,
+                container_name=config.AZURE_BLOB_CONTAINER_NAME
             )
             
-            environment = getattr(Config, 'ENVIRONMENT', 'development')
+            environment = config.ENVIRONMENT
             logger.info(f"Environment: {environment}")
             
             # Load model
             logger.info("Step 1/2: Downloading model from blob storage...")
-            model_bytes = blob_client.download_latest_model(
+            model_result = blob_client.download_latest_model(
                 environment=environment,
                 base_name="model"
             )
             
-            if not model_bytes:
+            if not model_result:
                 logger.warning("Latest model not found, trying versioned models...")
-                model_bytes = blob_client.download_newest_versioned_model(
+                model_result = blob_client.download_newest_versioned_model(
                     environment=environment,
                     base_name="model"
                 )
             
-            if not model_bytes:
+            if not model_result:
                 raise Exception(f"Failed to download model from {environment} environment")
             
-            logger.info(f"Model downloaded: {len(model_bytes) / (1024*1024):.2f} MB")
+            # Unpack tuple (bytes, blob_name)
+            model_bytes, blob_name = model_result
+            self._model_name = blob_name  # Store the blob name for traceability
+            
+            logger.info(f"Model downloaded: {len(model_bytes) / (1024*1024):.2f} MB from {blob_name}")
             
             # Deserialize model
             logger.info("Deserializing model...")
@@ -146,6 +151,22 @@ class ModelManager:
             )
         return self._config
     
+    def get_model_name(self) -> str:
+        """
+        Get the loaded model's blob name (e.g., 'homolog/model_20240215_123456.joblib').
+        
+        Returns:
+            The blob name of the loaded model
+            
+        Raises:
+            RuntimeError: If model hasn't been loaded yet
+        """
+        if self._model_name is None:
+            raise RuntimeError(
+                "Model name not available. Make sure load_model_and_config() was called during startup."
+            )
+        return self._model_name
+    
     async def cleanup(self) -> None:
         """
         Cleanup resources on shutdown.
@@ -153,6 +174,7 @@ class ModelManager:
         logger.info("Cleaning up model manager resources...")
         self._model = None
         self._config = None
+        self._model_name = None
         logger.info("Model manager cleanup complete")
 
 

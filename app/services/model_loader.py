@@ -3,7 +3,7 @@ import io
 import joblib
 import __main__
 from app.services.blob_service import load_joblib_from_url, BlobStorageClient
-from app.config import Config
+from app.config import config
 from app.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -16,17 +16,17 @@ __main__.to_float32 = to_float32
 
 def load_model():
     
-    logger.info(f"Loading model from {getattr(Config, 'ENVIRONMENT', 'development')} environment")
+    logger.info(f"Loading model from {config.ENVIRONMENT} environment")
     
     try:
         blob_client = BlobStorageClient(
-            connection_string=getattr(Config, 'AZURE_STORAGE_CONNECTION_STRING', None),
-            account_name=getattr(Config, 'AZURE_STORAGE_ACCOUNT_NAME', None),
-            account_key=getattr(Config, 'AZURE_STORAGE_ACCOUNT_KEY', None),
-            container_name=getattr(Config, 'AZURE_BLOB_CONTAINER_NAME', 'devconteiner')
+            connection_string=config.AZURE_STORAGE_CONNECTION_STRING,
+            account_name=config.AZURE_STORAGE_ACCOUNT_NAME,
+            account_key=config.AZURE_STORAGE_ACCOUNT_KEY,
+            container_name=config.AZURE_BLOB_CONTAINER_NAME
         )
         
-        environment = getattr(Config, 'ENVIRONMENT', 'development')
+        environment = config.ENVIRONMENT
         
         logger.info("Attempting to download latest model...")
         model_bytes = blob_client.download_latest_model(

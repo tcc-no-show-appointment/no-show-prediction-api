@@ -68,7 +68,8 @@ class BlobStorageClient:
         self,
         environment: str = "homolog",
         base_name: str = "model"
-    ) -> Optional[bytes]:
+    ) -> Optional[tuple[bytes, str]]:
+        """Download latest model and return (bytes, blob_name) tuple."""
         latest_blob_name = f"{environment}/{base_name}_latest.joblib"
         
         try:
@@ -83,14 +84,14 @@ class BlobStorageClient:
                 download_stream = blob_client.download_blob()
                 model_bytes = download_stream.readall()
                 logger.info(f"Successfully downloaded {len(model_bytes)} bytes using Azure SDK")
-                return model_bytes
+                return (model_bytes, latest_blob_name)
             else:
                 blob_url = f"https://{self.account_name}.blob.core.windows.net/{self.container_name}/{latest_blob_name}"
                 logger.info(f"Attempting public URL download: {blob_url}")
                 response = requests.get(blob_url, timeout=30)
                 response.raise_for_status()
                 logger.info(f"Successfully downloaded {len(response.content)} bytes via public URL")
-                return response.content
+                return (response.content, latest_blob_name)
                 
         except AzureError as e:
             logger.error(f"Azure error downloading latest model: {str(e)}")
@@ -103,7 +104,8 @@ class BlobStorageClient:
         self,
         environment: str = "homolog",
         base_name: str = "model"
-    ) -> Optional[bytes]:
+    ) -> Optional[tuple[bytes, str]]:
+        """Download newest versioned model and return (bytes, blob_name) tuple."""
         if not self.blob_service_client:
             logger.error("Blob service client not initialized for listing")
             return None
@@ -136,7 +138,7 @@ class BlobStorageClient:
             download_stream = blob_client.download_blob()
             model_bytes = download_stream.readall()
             logger.info(f"Successfully downloaded {len(model_bytes)} bytes from versioned model")
-            return model_bytes
+            return (model_bytes, newest_blob.name)
             
         except Exception as e:
             logger.error(f"Error downloading newest versioned model: {str(e)}")

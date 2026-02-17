@@ -9,4 +9,6 @@ pytest-asyncio
 httpx
 azure-storage-blob
 pyyaml
+sqlalchemy
+pyodbc
 git+https://github.com/tcc-no-show-appointment/noshow_lib.git@v0.2.1
