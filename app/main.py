@@ -38,7 +38,8 @@ app = FastAPI(
     title="No-Show Prediction API",
     description="API for predicting whether patients will show up for their medical appointments",
     version="1.0.0",
-    lifespan=lifespan
+    lifespan=lifespan,
+    redirect_slashes=False
 )
 
 app.include_router(prediction_router, tags=["predictions"])
