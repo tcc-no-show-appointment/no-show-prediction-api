@@ -45,7 +45,8 @@ app = FastAPI(
 app.include_router(prediction_router, tags=["predictions"])
 app.include_router(appointment_router, tags=["appointments"])
 
-@app.get("/", tags=["health"])
+@app.get("", tags=["health"])
+@app.get("/", tags=["health"], include_in_schema=False)
 async def root():
     return {"status": "ok", "message": "No-Show Prediction API is running"}
 
