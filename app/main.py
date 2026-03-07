@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from app.routes.prediction_routes import router as prediction_router
 from app.routes.appointment_routes import router as appointment_router
@@ -40,6 +41,15 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
     redirect_slashes=False
+)
+
+# Configure CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # In production, replace with specific origins
+    allow_credentials=True,
+    allow_methods=["*"],  # Allows all methods including OPTIONS, POST, GET, etc.
+    allow_headers=["*"],  # Allows all headers
 )
 
 app.include_router(prediction_router, tags=["predictions"])
