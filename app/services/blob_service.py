@@ -1,7 +1,8 @@
 import requests
 import io
+import json
 import joblib
-from typing import Optional
+from typing import Optional, Dict, Any, List, Tuple
 from azure.storage.blob import BlobServiceClient
 from azure.core.exceptions import AzureError
 from app.utils.logger import get_logger
@@ -190,3 +191,119 @@ class BlobStorageClient:
         except Exception as e:
             logger.error(f"Error downloading config file from {blob_path}: {str(e)}")
             return None
+
+    def download_specialty_models(
+        self,
+        environment: str = "homolog",
+    ) -> Dict[str, Tuple[bytes, str]]:
+        """
+        Download all per-specialty models from blob storage.
+
+        Looks for blobs matching the new path convention:
+            {environment}/{specialty}/model_latest.joblib
+
+        Returns:
+            Dict {SPECIALTY_GROUP: (model_bytes, blob_name)}
+        """
+        if not self.blob_service_client:
+            logger.error("Blob service client not initialized for listing specialty models")
+            return {}
+
+        prefix = f"{environment}/"
+
+        try:
+            container_client = self.blob_service_client.get_container_client(self.container_name)
+            models: Dict[str, Tuple[bytes, str]] = {}
+
+            for blob in container_client.list_blobs(name_starts_with=prefix):
+                # Pattern: {environment}/{specialty}/model_latest.joblib (exactly 3 parts)
+                parts = blob.name.split("/")
+                if (
+                    len(parts) == 3
+                    and parts[0] == environment
+                    and parts[2] == "model_latest.joblib"
+                ):
+                    specialty_key = parts[1].upper()
+
+                    blob_client = self.blob_service_client.get_blob_client(
+                        container=self.container_name, blob=blob.name
+                    )
+                    data = blob_client.download_blob().readall()
+                    models[specialty_key] = (data, blob.name)
+                    logger.info(
+                        f"Downloaded specialty model: {blob.name} "
+                        f"({len(data)/(1024*1024):.2f} MB) → '{specialty_key}'"
+                    )
+
+            logger.info(f"Downloaded {len(models)} specialty model(s): {list(models.keys())}")
+            return models
+
+        except Exception as e:
+            logger.error(f"Error downloading specialty models: {str(e)}")
+            return {}
+
+    def download_default_model(
+        self,
+        environment: str = "homolog",
+    ) -> Optional[Tuple[bytes, str]]:
+        """
+        Download the default/fallback model from the root environment folder.
+
+        Attempts ``{environment}/model_latest.joblib`` (the old single-model path).
+        Returns None if no such file exists — callers must handle gracefully.
+
+        Returns:
+            (model_bytes, blob_name) tuple or None.
+        """
+        blob_path = f"{environment}/model_latest.joblib"
+        try:
+            if not self.blob_service_client:
+                logger.warning("Blob service client not initialized; cannot download default model")
+                return None
+
+            blob_client = self.blob_service_client.get_blob_client(
+                container=self.container_name, blob=blob_path
+            )
+            data = blob_client.download_blob().readall()
+            logger.info(
+                f"Default model downloaded: {blob_path} ({len(data)/(1024*1024):.2f} MB)"
+            )
+            return (data, blob_path)
+
+        except AzureError as e:
+            logger.info(f"Default model not found at '{blob_path}': {str(e)}")
+            return None
+        except Exception as e:
+            logger.info(f"Could not download default model from '{blob_path}': {str(e)}")
+            return None
+
+    def download_thresholds(
+        self,
+        environment: str = "homolog",
+    ) -> Dict[str, float]:
+        """
+        Download the consolidated thresholds JSON from blob storage.
+
+        Returns:
+            Dict {SPECIALTY_GROUP: threshold_float}
+        """
+        blob_path = f"{environment}/thresholds/thresholds_latest.json"
+        try:
+            if not self.blob_service_client:
+                logger.error("Blob service client not initialized")
+                return {}
+
+            blob_client = self.blob_service_client.get_blob_client(
+                container=self.container_name, blob=blob_path
+            )
+            data = blob_client.download_blob().readall()
+            thresholds = json.loads(data.decode("utf-8"))
+            logger.info(f"Downloaded thresholds for {len(thresholds)} specialties")
+            return thresholds
+
+        except AzureError as e:
+            logger.warning(f"Could not download thresholds from {blob_path}: {str(e)}")
+            return {}
+        except Exception as e:
+            logger.warning(f"Error downloading thresholds from {blob_path}: {str(e)}")
+            return {}

@@ -64,16 +64,21 @@ async def root():
 @app.get("/health", tags=["health"])
 async def health_check():
     """
-    Health check endpoint that verifies model is loaded.
+    Health check endpoint that verifies models are loaded.
     """
     try:
-        model = model_manager.get_model()
+        effective = model_manager.get_effective_models()
         config = model_manager.get_config()
+        thresholds = model_manager.get_thresholds()
+        default = model_manager.get_default_model()
         return {
             "status": "healthy",
-            "model_loaded": model is not None,
+            "effective_models": len(effective),
+            "specialties": list(effective.keys()),
+            "dedicated_specialty_models": list(model_manager.get_models().keys()),
+            "outras_especialidades_fallback": default is not None,
             "config_loaded": config is not None,
-            "model_type": type(model).__name__ if model else None
+            "thresholds": thresholds,
         }
     except Exception as e:
         return {
