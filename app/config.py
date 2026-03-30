@@ -35,6 +35,7 @@ class Config:
     DB_DRIVER: str = os.getenv("DB_DRIVER", "{ODBC Driver 17 for SQL Server}")
     DB_SCHEMA: str = os.getenv("DB_SCHEMA", "dbo")
     DB_TABLE_APPOINTMENTS: str = os.getenv("DB_TABLE_APPOINTMENTS", "appointment_predictions")
+    DB_TABLE_TRAINING_DATA: str = os.getenv("DB_TABLE_TRAINING_DATA", "appointment_training_data")
 
 config = Config()
 

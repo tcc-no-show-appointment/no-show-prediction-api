@@ -3,7 +3,7 @@ import sys
 import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import pytest
-from app.services.model_loader import get_model
+from app.services.model_loader import get_models
 
 
 # def test_get_model_loads():

@@ -12,40 +12,31 @@ async def predict(raw_data: Dict[str, Any]) -> Dict[str, Any]:
     """
     Predict patient no-show using noshow_lib inference pipeline.
     
-    The model and config are already loaded in memory (loaded at startup).
-    This function just performs the prediction using the cached resources.
-    
-    Args:
-        raw_data: Dictionary or list of dictionaries with appointment data
-                 (using Portuguese column names from config.yaml)
-        
-    Returns:
-        Dictionary with prediction results including probabilities
+    Uses per-specialty models loaded at startup. The noshow_lib predict
+    function routes each record to the correct specialty model automatically
+    based on the specialty_group column (derived during feature engineering).
     """
     logger.info("Starting prediction pipeline")
     
     try:
-        # Get model and config from memory (already loaded at startup)
         config = model_manager.get_config()
-        model = model_manager.get_model()
-        logger.info("Using cached model and config from memory")
+        models = model_manager.get_effective_models()
+        thresholds = model_manager.get_thresholds()
+        logger.info(f"Using {len(models)} effective specialty models")
         
         df = pd.DataFrame([raw_data]) if isinstance(raw_data, dict) else pd.DataFrame(raw_data)
         logger.info(f"Input data shape: {df.shape}, columns: {list(df.columns)}")
         
-        # Use noshow_lib's predict function (handles feature engineering, categorical features, etc.)
-        logger.info("Using noshow_lib.model_inference.predict for inference")
         result_df = noshow_predict(
-            model=model,
+            models=models,
             input_data=df,
             config=config,
-            output_path=None,  # Don't save to file
-            threshold=0.5
+            output_path=None,
+            thresholds=thresholds,
         )
         
         logger.info(f"Prediction completed. Result shape: {result_df.shape}")
         
-        # Extract results from the first row
         probability_no_show = float(result_df['probability'].iloc[0])
         prediction_value = int(result_df['prediction'].iloc[0])
         probability_show = 1.0 - probability_no_show
@@ -56,6 +47,10 @@ async def predict(raw_data: Dict[str, Any]) -> Dict[str, Any]:
             "probability_show": probability_show,
             "probability_no_show": probability_no_show
         }
+        
+        # Include specialty_group if available
+        if "specialty_group" in result_df.columns:
+            result["specialty_group"] = str(result_df['specialty_group'].iloc[0])
         
         logger.info(f"Prediction: {result['prediction_label']} (confidence: {max(probability_show, probability_no_show):.2%})")
         return result
@@ -69,45 +64,30 @@ async def predict_batch(appointments: List[Dict[str, Any]]) -> Dict[str, Any]:
     """
     Predict patient no-show for multiple appointments in batch.
     
-    This function processes all appointments in a single vectorized operation
-    for maximum performance and scalability.
-    
-    Args:
-        appointments: List of dictionaries with appointment data
-                     (using Portuguese column names from config.yaml)
-        
-    Returns:
-        Dictionary with:
-        - total: Total number of predictions
-        - predicted_show: Count of Show predictions
-        - predicted_no_show: Count of No-Show predictions
-        - results: List of individual results with original data + predictions
+    All appointments are processed in a single vectorized operation.
+    Each appointment is routed to the appropriate specialty model.
     """
     logger.info(f"Starting batch prediction for {len(appointments)} appointments")
     
     try:
-        # Get model and config from memory (already loaded at startup)
         config = model_manager.get_config()
-        model = model_manager.get_model()
-        logger.info("Using cached model and config from memory")
+        models = model_manager.get_effective_models()
+        thresholds = model_manager.get_thresholds()
+        logger.info(f"Using {len(models)} effective specialty models")
         
-        # Convert all appointments to a single DataFrame for vectorized processing
         df = pd.DataFrame(appointments)
         logger.info(f"Batch input shape: {df.shape}, columns: {list(df.columns)}")
         
-        # Use noshow_lib's predict function (handles all feature engineering in one go)
-        logger.info("Running batch inference using noshow_lib.model_inference.predict")
         result_df = noshow_predict(
-            model=model,
+            models=models,
             input_data=df,
             config=config,
-            output_path=None,  # Don't save to file
-            threshold=0.5
+            output_path=None,
+            thresholds=thresholds,
         )
         
         logger.info(f"Batch prediction completed. Result shape: {result_df.shape}")
         
-        # Build results list with original data + predictions
         results = []
         predicted_show_count = 0
         predicted_no_show_count = 0
@@ -117,13 +97,11 @@ async def predict_batch(appointments: List[Dict[str, Any]]) -> Dict[str, Any]:
             prediction_value = int(result_df['prediction'].iloc[idx])
             probability_show = 1.0 - probability_no_show
             
-            # Count predictions
             if prediction_value == 1:
                 predicted_no_show_count += 1
             else:
                 predicted_show_count += 1
             
-            # Build result with original appointment data + predictions
             result = {
                 "appointment": appointments[idx],
                 "prediction": prediction_value,
@@ -131,6 +109,8 @@ async def predict_batch(appointments: List[Dict[str, Any]]) -> Dict[str, Any]:
                 "probability_show": probability_show,
                 "probability_no_show": probability_no_show
             }
+            if "specialty_group" in result_df.columns:
+                result["specialty_group"] = str(result_df['specialty_group'].iloc[idx])
             results.append(result)
         
         batch_result = {
@@ -154,31 +134,17 @@ async def predict_batch(appointments: List[Dict[str, Any]]) -> Dict[str, Any]:
 async def predict_range(appointment_data: Dict[str, Any], range_days: int) -> Dict[str, Any]:
     """
     Predict patient no-show across a range of dates for a single appointment.
-    
-    This function takes one appointment and generates predictions for different
-    appointment dates within the specified range, useful for calendar visualization
-    and optimal appointment scheduling.
-    
-    Args:
-        appointment_data: Dictionary with appointment data(using Portuguese column names)
-        range_days: Number of days to predict (3-5 days starting from appointment date)
-        
-    Returns:
-        Dictionary with predictions for each date in the range and summary statistics
     """
     logger.info(f"Starting range prediction for {range_days} days")
     
     try:
-        # Parse original appointment date and time
         original_datetime_str = appointment_data.get('DataHoraConsulta')
         if not original_datetime_str:
             raise ValueError("DataHoraConsulta is required for range prediction")
         
-        # Parse the datetime (handles both ISO format and common formats)
         try:
             original_datetime = datetime.fromisoformat(original_datetime_str.replace('Z', '+00:00'))
         except:
-            # Try common formats
             for fmt in ['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%d']:
                 try:
                     original_datetime = datetime.strptime(original_datetime_str, fmt)
@@ -193,15 +159,13 @@ async def predict_range(appointment_data: Dict[str, Any], range_days: int) -> Di
         
         logger.info(f"Original appointment: {original_date} at {original_time}")
         
-        # Generate appointment variations for each date in the range
         appointments_variations = []
-        date_mapping = []  # Track which date corresponds to each variation
+        date_mapping = []
         
         for day_offset in range(range_days):
             target_date = original_date + timedelta(days=day_offset)
             target_datetime = datetime.combine(target_date, original_time)
             
-            # Create appointment variation with new date
             appointment_variation = appointment_data.copy()
             appointment_variation['DataHoraConsulta'] = target_datetime.strftime('%Y-%m-%dT%H:%M:%S')
             
@@ -210,26 +174,23 @@ async def predict_range(appointment_data: Dict[str, Any], range_days: int) -> Di
         
         logger.info(f"Generated {len(appointments_variations)} appointment variations")
         
-        # Get model and config from memory
         config = model_manager.get_config()
-        model = model_manager.get_model()
+        models = model_manager.get_effective_models()
+        thresholds = model_manager.get_thresholds()
         
-        # Convert to DataFrame for batch prediction
         df = pd.DataFrame(appointments_variations)
         
-        # Run batch inference
         logger.info("Running range inference using noshow_lib.model_inference.predict")
         result_df = noshow_predict(
-            model=model,
+            models=models,
             input_data=df,
             config=config,
             output_path=None,
-            threshold=0.5
+            thresholds=thresholds,
         )
         
         logger.info(f"Range prediction completed. Result shape: {result_df.shape}")
         
-        # Build predictions list with date information
         predictions = []
         probabilities_no_show = []
         
@@ -249,12 +210,10 @@ async def predict_range(appointment_data: Dict[str, Any], range_days: int) -> Di
             }
             predictions.append(date_pred)
         
-        # Calculate summary statistics
         avg_prob = sum(probabilities_no_show) / len(probabilities_no_show)
         min_prob = min(probabilities_no_show)
         max_prob = max(probabilities_no_show)
         
-        # Find best (lowest no-show risk) and worst (highest no-show risk) dates
         best_idx = probabilities_no_show.index(min_prob)
         worst_idx = probabilities_no_show.index(max_prob)
         

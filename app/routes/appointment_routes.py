@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from typing import Optional
 from app.database import get_db
 from app.services.appointment_service import AppointmentService
+from app.services.model_manager import model_manager
 from app.models.schemas import (
     AppointmentCreate,
     AppointmentResponse,
@@ -165,6 +166,73 @@ async def update_appointment_status(
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"Error updating appointment status: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.patch(
+    "/appointments/feedback/{appointment_id}",
+    response_model=AppointmentResponse,
+    responses={
+        404: {"model": ErrorResponse},
+        400: {"model": ErrorResponse},
+        500: {"model": ErrorResponse}
+    }
+)
+async def update_appointment_feedback(
+    appointment_id: int,
+    status_update: AppointmentStatusUpdate,
+    db: Session = Depends(get_db)
+):
+    """
+    Register patient attendance feedback and trigger the training pipeline.
+
+    Accepts the actual outcome (Realizado / Falta / Cancelado).
+    For Realizado and Falta the appointment is processed through the
+    noshow_lib feature-engineering pipeline and saved to
+    appointment_training_data for future model retraining.
+    """
+    try:
+        logger.info(f"Registering feedback for appointment {appointment_id}")
+
+        updated_appointment = AppointmentService.update_appointment_status(
+            db=db,
+            appointment_id=appointment_id,
+            status_update=status_update,
+        )
+
+        if not updated_appointment:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Appointment {appointment_id} not found"
+            )
+
+        try:
+            noshow_config = model_manager.get_config()
+            saved = AppointmentService.process_feedback_to_training(
+                db=db,
+                appointment=updated_appointment,
+                noshow_yaml_config=noshow_config,
+            )
+            if saved:
+                logger.info(
+                    f"Appointment {appointment_id} processed into training data"
+                )
+        except Exception as pipeline_err:
+            logger.error(
+                f"Training pipeline failed for appointment {appointment_id}: "
+                f"{pipeline_err}",
+                exc_info=True,
+            )
+
+        return updated_appointment
+
+    except HTTPException:
+        raise
+    except ValueError as e:
+        logger.error(f"Invalid feedback data: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error registering feedback: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
