@@ -50,7 +50,7 @@ class PredictionResponse(BaseModel):
         json_schema_extra={
             "example": {
                 "prediction": 0,
-                "prediction_label": "Show",
+                "prediction_label": "show",
                 "probability_show": 0.75,
                 "probability_no_show": 0.25
             }
@@ -138,7 +138,7 @@ class AppointmentPredictionResult(BaseModel):
                     "Especialidade": "CARDIOLOGIA"
                 },
                 "prediction": 0,
-                "prediction_label": "Show",
+                "prediction_label": "show",
                 "probability_show": 0.75,
                 "probability_no_show": 0.25
             }
@@ -164,7 +164,7 @@ class BatchPredictionResponse(BaseModel):
                     {
                         "appointment": {"id": 5642903},
                         "prediction": 0,
-                        "prediction_label": "Show",
+                        "prediction_label": "show",
                         "probability_show": 0.75,
                         "probability_no_show": 0.25
                     }
