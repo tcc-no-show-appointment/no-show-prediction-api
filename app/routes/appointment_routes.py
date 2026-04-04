@@ -4,7 +4,6 @@ from sqlalchemy.orm import Session
 from typing import Optional
 from app.database import get_db
 from app.services.appointment_service import AppointmentService
-from app.services.model_manager import model_manager
 from app.models.schemas import (
     AppointmentCreate,
     AppointmentResponse,
@@ -184,12 +183,11 @@ async def update_appointment_feedback(
     db: Session = Depends(get_db)
 ):
     """
-    Register patient attendance feedback and trigger the training pipeline.
+    Register patient attendance feedback (actual outcome).
 
-    Accepts the actual outcome (Realizado / Falta / Cancelado).
-    For Realizado and Falta the appointment is processed through the
-    noshow_lib feature-engineering pipeline and saved to
-    appointment_training_data for future model retraining.
+    Accepts the actual outcome (Realizado / Falta / Cancelado) and persists
+    it to dbo.appointment_predictions.  Training data ingestion happens via
+    file upload to the Training API — not from individual prediction feedback.
     """
     try:
         logger.info(f"Registering feedback for appointment {appointment_id}")
@@ -204,24 +202,6 @@ async def update_appointment_feedback(
             raise HTTPException(
                 status_code=404,
                 detail=f"Appointment {appointment_id} not found"
-            )
-
-        try:
-            noshow_config = model_manager.get_config()
-            saved = AppointmentService.process_feedback_to_training(
-                db=db,
-                appointment=updated_appointment,
-                noshow_yaml_config=noshow_config,
-            )
-            if saved:
-                logger.info(
-                    f"Appointment {appointment_id} processed into training data"
-                )
-        except Exception as pipeline_err:
-            logger.error(
-                f"Training pipeline failed for appointment {appointment_id}: "
-                f"{pipeline_err}",
-                exc_info=True,
             )
 
         return updated_appointment
