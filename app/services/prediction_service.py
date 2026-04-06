@@ -63,69 +63,72 @@ async def predict(raw_data: Dict[str, Any]) -> Dict[str, Any]:
 async def predict_batch(appointments: List[Dict[str, Any]]) -> Dict[str, Any]:
     """
     Predict patient no-show for multiple appointments in batch.
-    
-    All appointments are processed in a single vectorized operation.
-    Each appointment is routed to the appropriate specialty model.
+
+    Each appointment is predicted in isolation (one-row DataFrame per call) so
+    that within-batch cumulative history features computed by noshow_lib's
+    feature engineering (e.g. previous_appointments_count, waiting_days_delta)
+    are not contaminated by sibling rows in the same request.  This guarantees
+    that sending N identical appointments in one batch produces the same result
+    as calling /predict N times individually.
     """
     logger.info(f"Starting batch prediction for {len(appointments)} appointments")
-    
+
     try:
         config = model_manager.get_config()
         models = model_manager.get_effective_models()
         thresholds = model_manager.get_thresholds()
         logger.info(f"Using {len(models)} effective specialty models")
-        
-        df = pd.DataFrame(appointments)
-        logger.info(f"Batch input shape: {df.shape}, columns: {list(df.columns)}")
-        
-        result_df = noshow_predict(
-            models=models,
-            input_data=df,
-            config=config,
-            output_path=None,
-            thresholds=thresholds,
-        )
-        
-        logger.info(f"Batch prediction completed. Result shape: {result_df.shape}")
-        
+
         results = []
         predicted_show_count = 0
         predicted_no_show_count = 0
-        
-        for idx in range(len(result_df)):
-            probability_no_show = float(result_df['probability'].iloc[idx])
-            prediction_value = int(result_df['prediction'].iloc[idx])
+
+        for idx, appointment in enumerate(appointments):
+            df = pd.DataFrame([appointment])
+
+            result_df = noshow_predict(
+                models=models,
+                input_data=df,
+                config=config,
+                output_path=None,
+                thresholds=thresholds,
+            )
+
+            probability_no_show = float(result_df['probability'].iloc[0])
+            prediction_value = int(result_df['prediction'].iloc[0])
             probability_show = 1.0 - probability_no_show
-            
+
             if prediction_value == 1:
                 predicted_no_show_count += 1
             else:
                 predicted_show_count += 1
-            
+
             result = {
-                "appointment": appointments[idx],
+                "appointment": appointment,
                 "prediction": prediction_value,
                 "prediction_label": PREDICTION_LABEL_NO_SHOW if prediction_value == 1 else PREDICTION_LABEL_SHOW,
                 "probability_show": probability_show,
-                "probability_no_show": probability_no_show
+                "probability_no_show": probability_no_show,
             }
             if "specialty_group" in result_df.columns:
-                result["specialty_group"] = str(result_df['specialty_group'].iloc[idx])
+                result["specialty_group"] = str(result_df['specialty_group'].iloc[0])
             results.append(result)
-        
+
+        logger.info(f"Batch prediction completed. {len(results)} predictions generated.")
+
         batch_result = {
             "total": len(appointments),
             "predicted_show": predicted_show_count,
             "predicted_no_show": predicted_no_show_count,
-            "results": results
+            "results": results,
         }
-        
+
         logger.info(
             f"Batch prediction complete: {predicted_show_count} Show, "
             f"{predicted_no_show_count} No-Show (total: {len(appointments)})"
         )
         return batch_result
-        
+
     except Exception as e:
         logger.error(f"Error in batch prediction pipeline: {str(e)}", exc_info=True)
         raise
