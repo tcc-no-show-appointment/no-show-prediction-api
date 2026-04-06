@@ -31,7 +31,6 @@ async def predict(raw_data: Dict[str, Any]) -> Dict[str, Any]:
             models=models,
             input_data=df,
             config=config,
-            output_path=None,
             thresholds=thresholds,
         )
         
