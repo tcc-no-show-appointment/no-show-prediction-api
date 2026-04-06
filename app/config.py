@@ -22,6 +22,8 @@ class Config:
     API_VERSION: str = "1.0.0"
     API_DESCRIPTION: str = "API for predicting whether patients will show up for their medical appointments"
     
+    ROOT_PATH: str = os.getenv("ROOT_PATH", "")
+
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
     LOG_FILE: str = os.getenv("LOG_FILE", "app.log")
     

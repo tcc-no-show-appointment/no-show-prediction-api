@@ -5,6 +5,7 @@ from app.routes.prediction_routes import router as prediction_router
 from app.routes.appointment_routes import router as appointment_router
 from app.services.model_manager import model_manager
 from app.utils.logger import get_logger
+from app.config import config
 
 logger = get_logger(__name__)
 
@@ -40,7 +41,8 @@ app = FastAPI(
     description="API for predicting whether patients will show up for their medical appointments",
     version="1.0.0",
     lifespan=lifespan,
-    redirect_slashes=False
+    redirect_slashes=False,
+    root_path=config.ROOT_PATH
 )
 
 # Configure CORS
