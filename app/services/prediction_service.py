@@ -89,7 +89,6 @@ async def predict_batch(appointments: List[Dict[str, Any]]) -> Dict[str, Any]:
                 models=models,
                 input_data=df,
                 config=config,
-                output_path=None,
                 thresholds=thresholds,
             )
 
@@ -187,7 +186,6 @@ async def predict_range(appointment_data: Dict[str, Any], range_days: int) -> Di
             models=models,
             input_data=df,
             config=config,
-            output_path=None,
             thresholds=thresholds,
         )
         
