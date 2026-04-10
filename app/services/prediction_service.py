@@ -1,12 +1,55 @@
 import pandas as pd
 from typing import Dict, Any, List
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from app.services.model_manager import model_manager
 from app.constants import PREDICTION_LABEL_SHOW, PREDICTION_LABEL_NO_SHOW
 from app.utils.logger import get_logger
 from noshow_lib.model_inference import predict as noshow_predict
+from noshow_lib.stats_enrichment import enrich_with_precomputed_stats
 
 logger = get_logger(__name__)
+
+
+def _has_patient_id(raw_data: Dict[str, Any]) -> bool:
+    """Check if the input has a patient identifier (idUnicoPaciente or patient_id)."""
+    return bool(
+        raw_data.get("idUnicoPaciente")
+        or raw_data.get("patient_id")
+    )
+
+
+def _enrich_df_if_eligible(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Enrich a DataFrame with precomputed stats if patient_id is available.
+    Skips enrichment when no patient_id column is present or stats are not loaded.
+    """
+    patient_stats = model_manager.get_patient_stats()
+    contextual_stats = model_manager.get_contextual_stats()
+
+    if patient_stats is None and contextual_stats is None:
+        return df
+
+    config = model_manager.get_config()
+
+    # Determine if any row has a patient_id
+    id_col = "idUnicoPaciente" if "idUnicoPaciente" in df.columns else "patient_id"
+    if id_col not in df.columns:
+        logger.info("No patient ID column in input. Skipping stats enrichment.")
+        return df
+
+    has_any_id = df[id_col].notna().any() and (df[id_col].astype(str).str.strip() != "").any()
+    if not has_any_id:
+        logger.info("Patient ID column is empty for all rows. Skipping stats enrichment.")
+        return df
+
+    logger.info(f"Enriching {len(df)} rows with precomputed stats.")
+    return enrich_with_precomputed_stats(
+        df=df,
+        patient_stats=patient_stats,
+        contextual_stats=contextual_stats,
+        config=config,
+        reference_date=date.today(),
+    )
 
 async def predict(raw_data: Dict[str, Any]) -> Dict[str, Any]:
     """
@@ -26,6 +69,9 @@ async def predict(raw_data: Dict[str, Any]) -> Dict[str, Any]:
         
         df = pd.DataFrame([raw_data]) if isinstance(raw_data, dict) else pd.DataFrame(raw_data)
         logger.info(f"Input data shape: {df.shape}, columns: {list(df.columns)}")
+        
+        # Enrich with precomputed stats if patient_id is available
+        df = _enrich_df_if_eligible(df)
         
         result_df = noshow_predict(
             models=models,
@@ -84,6 +130,9 @@ async def predict_batch(appointments: List[Dict[str, Any]]) -> Dict[str, Any]:
 
         for idx, appointment in enumerate(appointments):
             df = pd.DataFrame([appointment])
+
+            # Enrich with precomputed stats if patient_id is available
+            df = _enrich_df_if_eligible(df)
 
             result_df = noshow_predict(
                 models=models,
@@ -180,6 +229,9 @@ async def predict_range(appointment_data: Dict[str, Any], range_days: int) -> Di
         thresholds = model_manager.get_thresholds()
         
         df = pd.DataFrame(appointments_variations)
+        
+        # Enrich with precomputed stats if patient_id is available
+        df = _enrich_df_if_eligible(df)
         
         logger.info("Running range inference using noshow_lib.model_inference.predict")
         result_df = noshow_predict(

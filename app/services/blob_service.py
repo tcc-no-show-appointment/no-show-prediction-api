@@ -307,3 +307,42 @@ class BlobStorageClient:
         except Exception as e:
             logger.warning(f"Error downloading thresholds from {blob_path}: {str(e)}")
             return {}
+
+    def download_stats_parquet(
+        self,
+        environment: str = "homolog",
+        filename: str = "patient_stats_latest.parquet",
+    ) -> Optional[bytes]:
+        """
+        Download a precomputed stats parquet file from blob storage.
+
+        Path: {environment}/stats/{filename}
+
+        Args:
+            environment: Environment folder.
+            filename: Name of the stats parquet file.
+
+        Returns:
+            Raw bytes of the parquet file, or None if not found.
+        """
+        blob_path = f"{environment}/stats/{filename}"
+        try:
+            if not self.blob_service_client:
+                logger.warning("Blob service client not initialized for stats download")
+                return None
+
+            blob_client = self.blob_service_client.get_blob_client(
+                container=self.container_name, blob=blob_path
+            )
+            data = blob_client.download_blob().readall()
+            logger.info(
+                f"Downloaded stats parquet: {blob_path} ({len(data) / 1024:.1f} KB)"
+            )
+            return data
+
+        except AzureError as e:
+            logger.info(f"Stats parquet not found at '{blob_path}': {str(e)}")
+            return None
+        except Exception as e:
+            logger.info(f"Could not download stats parquet from '{blob_path}': {str(e)}")
+            return None

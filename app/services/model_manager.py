@@ -52,6 +52,8 @@ class ModelManager:
     _thresholds: Optional[Dict[str, float]] = None
     _config: Optional[Dict[str, Any]] = None
     _model_names: Optional[Dict[str, str]] = None
+    _patient_stats: Optional[Any] = None  # pd.DataFrame loaded at startup
+    _contextual_stats: Optional[Any] = None  # pd.DataFrame loaded at startup
     
     def __new__(cls):
         if cls._instance is None:
@@ -168,6 +170,49 @@ class ModelManager:
             self._config = yaml.safe_load(config_content)
             logger.info(f"✓ Configuration loaded with keys: {list(self._config.keys())}")
             
+            # ── Step 6: precomputed stats (optional) ───────────────────────
+            logger.info("Step 5/5: Downloading precomputed stats from blob storage...")
+            try:
+                import pandas as pd
+                from io import BytesIO as _BytesIO
+
+                patient_bytes = blob_client.download_stats_parquet(
+                    environment=environment,
+                    filename="patient_stats_latest.parquet",
+                )
+                if patient_bytes:
+                    _df = pd.read_parquet(_BytesIO(patient_bytes), engine="pyarrow")
+                    # Index by patient_id for O(1) lookup at inference time
+                    self._patient_stats = _df.set_index("patient_id") if "patient_id" in _df.columns else _df
+                    logger.info(
+                        f"✓ Patient stats loaded: {len(self._patient_stats)} patients"
+                    )
+                else:
+                    logger.warning(
+                        "Patient stats parquet not found in blob. "
+                        "Inference will proceed without precomputed patient history."
+                    )
+
+                contextual_bytes = blob_client.download_stats_parquet(
+                    environment=environment,
+                    filename="contextual_stats_latest.parquet",
+                )
+                if contextual_bytes:
+                    self._contextual_stats = pd.read_parquet(_BytesIO(contextual_bytes), engine="pyarrow")
+                    logger.info(
+                        f"✓ Contextual stats loaded: {len(self._contextual_stats)} rows"
+                    )
+                else:
+                    logger.warning(
+                        "Contextual stats parquet not found in blob. "
+                        "Inference will proceed without precomputed contextual rates."
+                    )
+            except Exception as e:
+                logger.warning(
+                    f"Failed to load precomputed stats: {e}. "
+                    f"Inference will proceed without stats (degraded accuracy)."
+                )
+            
             logger.info("=" * 80)
             logger.info(
                 f"MODEL MANAGER READY — {len(self._effective_models)} effective model(s) in memory"
@@ -227,6 +272,14 @@ class ModelManager:
             )
         return self._model_names
     
+    def get_patient_stats(self) -> Optional[Any]:
+        """Return precomputed patient stats DataFrame, or None if not loaded."""
+        return self._patient_stats
+
+    def get_contextual_stats(self) -> Optional[Any]:
+        """Return precomputed contextual stats DataFrame, or None if not loaded."""
+        return self._contextual_stats
+    
     async def cleanup(self) -> None:
         """Cleanup resources on shutdown."""
         logger.info("Cleaning up model manager resources...")
@@ -236,6 +289,8 @@ class ModelManager:
         self._thresholds = None
         self._config = None
         self._model_names = None
+        self._patient_stats = None
+        self._contextual_stats = None
         logger.info("Model manager cleanup complete")
 
 
