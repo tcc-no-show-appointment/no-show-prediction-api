@@ -418,3 +418,29 @@ class AppointmentBatchResponse(BaseModel):
     created: int = Field(..., description="Number of appointments successfully created")
     failed: int = Field(..., description="Number of appointments that failed")
     appointments: List[AppointmentResponse] = Field(..., description="Successfully created appointments")
+
+
+class FeedbackItem(BaseModel):
+    """A single feedback entry linking an appointment ID to its status"""
+    appointment_id: int = Field(..., description="Appointment prediction ID")
+    appointment_status: str = Field(
+        ..., description="Appointment status: Realizado (showed), Falta (no-show), Cancelado (canceled)"
+    )
+
+
+class FeedbackBatchRequest(BaseModel):
+    """Schema for updating multiple appointment statuses in a single request"""
+    feedbacks: List[FeedbackItem] = Field(
+        ...,
+        min_length=1,
+        max_length=250,
+        description="List of appointment feedback entries (max 250)"
+    )
+
+
+class FeedbackBatchResponse(BaseModel):
+    """Schema for batch feedback response"""
+    total: int = Field(..., description="Total feedbacks submitted")
+    updated: int = Field(..., description="Number of appointments successfully updated")
+    failed: int = Field(..., description="Number of appointments that failed (not found or error)")
+    appointments: List[AppointmentResponse] = Field(..., description="Successfully updated appointments")
