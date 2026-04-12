@@ -240,3 +240,44 @@ class AppointmentService:
         
         logger.info(f"Appointment {appointment_id} status updated successfully")
         return db_appointment
+
+    @staticmethod
+    def update_appointments_feedback_batch(
+        db: Session,
+        feedbacks: list
+    ) -> tuple:
+        """
+        Update status for multiple appointments in a single database transaction.
+
+        Args:
+            db: Database session
+            feedbacks: List of FeedbackItem objects (appointment_id + appointment_status)
+
+        Returns:
+            Tuple of (updated_appointments list, failed_count int)
+        """
+        logger.info(f"Batch feedback update for {len(feedbacks)} appointments")
+        updated = []
+        failed = 0
+
+        for item in feedbacks:
+            db_appointment = AppointmentService.get_appointment_by_id(db, item.appointment_id)
+            if not db_appointment:
+                logger.warning(f"Appointment {item.appointment_id} not found, skipping")
+                failed += 1
+                continue
+            db_appointment.appointment_status = item.appointment_status
+            db_appointment.updated_at = datetime.now()
+            updated.append(db_appointment)
+
+        try:
+            db.commit()
+            for appt in updated:
+                db.refresh(appt)
+            logger.info(f"Batch feedback complete: {len(updated)} updated, {failed} failed")
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Batch feedback commit failed: {e}", exc_info=True)
+            raise
+
+        return updated, failed

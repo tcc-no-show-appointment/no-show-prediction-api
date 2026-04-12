@@ -8,6 +8,8 @@ from app.models.schemas import (
     AppointmentCreate,
     AppointmentBatchCreate,
     AppointmentBatchResponse,
+    FeedbackBatchRequest,
+    FeedbackBatchResponse,
     AppointmentResponse,
     AppointmentStatusUpdate,
     AppointmentListResponse,
@@ -210,6 +212,47 @@ async def update_appointment_status(
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"Error updating appointment status: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.patch(
+    "/appointments/feedback/batch",
+    response_model=FeedbackBatchResponse,
+    responses={
+        400: {"model": ErrorResponse},
+        500: {"model": ErrorResponse}
+    }
+)
+async def update_appointments_feedback_batch(
+    batch: FeedbackBatchRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Register attendance feedback for multiple appointments in a single request.
+
+    More efficient than calling PATCH /appointments/feedback/:id repeatedly.
+
+    **Limits:**
+    - Maximum 250 entries per request
+    """
+    try:
+        logger.info(f"Batch feedback update for {len(batch.feedbacks)} appointments")
+
+        updated, failed = AppointmentService.update_appointments_feedback_batch(
+            db=db,
+            feedbacks=batch.feedbacks
+        )
+
+        logger.info(f"Batch feedback complete: {len(updated)} updated, {failed} failed")
+        return {
+            "total": len(batch.feedbacks),
+            "updated": len(updated),
+            "failed": failed,
+            "appointments": updated,
+        }
+
+    except Exception as e:
+        logger.error(f"Error in batch feedback: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
