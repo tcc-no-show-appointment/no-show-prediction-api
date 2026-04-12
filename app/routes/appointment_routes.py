@@ -6,6 +6,8 @@ from app.database import get_db
 from app.services.appointment_service import AppointmentService
 from app.models.schemas import (
     AppointmentCreate,
+    AppointmentBatchCreate,
+    AppointmentBatchResponse,
     AppointmentResponse,
     AppointmentStatusUpdate,
     AppointmentListResponse,
@@ -62,6 +64,49 @@ async def list_appointments(
         
     except Exception as e:
         logger.error(f"Error fetching appointments list: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.post(
+    "/appointments/batch",
+    response_model=AppointmentBatchResponse,
+    status_code=201,
+    responses={
+        400: {"model": ErrorResponse},
+        500: {"model": ErrorResponse}
+    }
+)
+async def create_appointments_batch(
+    batch: AppointmentBatchCreate,
+    db: Session = Depends(get_db)
+):
+    """
+    Create multiple appointments in a single request.
+
+    Processes all appointments in one database transaction, which is
+    significantly more efficient than calling POST /appointments repeatedly.
+
+    **Limits:**
+    - Maximum 250 appointments per request
+    """
+    try:
+        logger.info(f"Creating batch of {len(batch.appointments)} appointments")
+
+        created, failed = AppointmentService.create_appointments_batch(
+            db=db,
+            appointments_data=batch.appointments
+        )
+
+        logger.info(f"Batch complete: {len(created)} created, {failed} failed")
+        return {
+            "total": len(batch.appointments),
+            "created": len(created),
+            "failed": failed,
+            "appointments": created,
+        }
+
+    except Exception as e:
+        logger.error(f"Error in batch appointment creation: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error")
 
 

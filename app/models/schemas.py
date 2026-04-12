@@ -112,7 +112,7 @@ class BatchPredictionRequest(BaseModel):
     appointments: List[PredictionRequest] = Field(
         ..., 
         min_length=1,
-        max_length=1000,  # Reasonable limit for batch processing
+        max_length=250,  # Reasonable limit for batch processing
         description="List of appointments to predict"
     )
 
@@ -400,3 +400,21 @@ class AppointmentListResponse(BaseModel):
     page: int = Field(..., description="Current page number")
     page_size: int = Field(..., description="Items per page")
     appointments: List[AppointmentResponse] = Field(..., description="List of appointments")
+
+
+class AppointmentBatchCreate(BaseModel):
+    """Schema for creating multiple appointments in a single request"""
+    appointments: List[AppointmentCreate] = Field(
+        ...,
+        min_length=1,
+        max_length=250,
+        description="List of appointments to create (max 250)"
+    )
+
+
+class AppointmentBatchResponse(BaseModel):
+    """Schema for batch appointment creation response"""
+    total: int = Field(..., description="Total appointments submitted")
+    created: int = Field(..., description="Number of appointments successfully created")
+    failed: int = Field(..., description="Number of appointments that failed")
+    appointments: List[AppointmentResponse] = Field(..., description="Successfully created appointments")
