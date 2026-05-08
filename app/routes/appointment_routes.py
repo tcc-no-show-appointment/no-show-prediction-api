@@ -28,7 +28,7 @@ router = APIRouter()
 )
 async def list_appointments(
     page: int = Query(1, ge=1, description="Page number (starts at 1)"),
-    page_size: int = Query(50, ge=1, le=100, description="Items per page (max 100)"),
+    page_size: int = Query(50, ge=1, le=1000, description="Items per page (max 1000)"),
     patient_id: Optional[str] = Query(None, description="Filter by patient ID"),
     db: Session = Depends(get_db)
 ):
