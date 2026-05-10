@@ -52,7 +52,8 @@ class PredictionResponse(BaseModel):
                 "prediction": 0,
                 "prediction_label": "show",
                 "probability_show": 0.75,
-                "probability_no_show": 0.25
+                "probability_no_show": 0.25,
+                "probability_no_show_normalized": 0.25
             }
         }
     )
@@ -61,6 +62,7 @@ class PredictionResponse(BaseModel):
     prediction_label: str
     probability_show: float
     probability_no_show: float
+    probability_no_show_normalized: float
 
 
 class ErrorResponse(BaseModel):
@@ -150,6 +152,7 @@ class AppointmentPredictionResult(BaseModel):
     prediction_label: str = Field(..., description="Human-readable prediction label")
     probability_show: float = Field(..., description="Probability of patient showing up")
     probability_no_show: float = Field(..., description="Probability of patient not showing up")
+    probability_no_show_normalized: float = Field(..., description="Threshold-normalized no-show probability (0.5 = decision boundary)")
 
 
 class BatchPredictionResponse(BaseModel):
@@ -226,6 +229,7 @@ class DatePrediction(BaseModel):
     prediction: int = Field(..., description="Prediction value (0=Show, 1=No-Show)")
     prediction_label: str = Field(..., description="Human-readable prediction label")
     probability_no_show: float = Field(..., description="Probability of patient not showing up (%)")
+    probability_no_show_normalized: float = Field(..., description="Threshold-normalized no-show probability (0.5 = decision boundary)")
     probability_show: float = Field(..., description="Probability of patient showing up (%)")
 
 
@@ -319,6 +323,7 @@ class AppointmentCreate(BaseModel):
     prediction_label: Optional[str] = Field(None, description="Human-readable prediction label")
     probability_show: Optional[float] = Field(None, description="Probability of showing up")
     probability_no_show: Optional[float] = Field(None, description="Probability of not showing up")
+    probability_no_show_normalized: Optional[float] = Field(None, description="Threshold-normalized no-show probability (0.5 = decision boundary)")
 
 
 class AppointmentStatusUpdate(BaseModel):
@@ -388,7 +393,8 @@ class AppointmentResponse(BaseModel):
     prediction_label: Optional[str] = None
     probability_show: Optional[float] = None
     probability_no_show: Optional[float] = None
-    
+    probability_no_show_normalized: Optional[float] = None
+
     # Timestamps
     created_at: datetime
     updated_at: Optional[datetime] = None

@@ -51,6 +51,23 @@ def _enrich_df_if_eligible(df: pd.DataFrame) -> pd.DataFrame:
         reference_date=date.today(),
     )
 
+def _normalize_probability(p: float, threshold: float) -> float:
+    """
+    Piecewise-linear normalization that maps the specialty threshold to 0.5.
+
+    [0, threshold]  → [0, 0.5]
+    [threshold, 1]  → [0.5, 1]
+
+    This lets every specialty share the same decision boundary (0.5) when
+    shown to end-users, regardless of the raw per-specialty threshold.
+    """
+    if threshold <= 0 or threshold >= 1:
+        return p
+    if p < threshold:
+        return p / (2.0 * threshold)
+    return 0.5 + (p - threshold) / (2.0 * (1.0 - threshold))
+
+
 async def predict(raw_data: Dict[str, Any]) -> Dict[str, Any]:
     """
     Predict patient no-show using noshow_lib inference pipeline.
@@ -85,17 +102,22 @@ async def predict(raw_data: Dict[str, Any]) -> Dict[str, Any]:
         probability_no_show = float(result_df['probability'].iloc[0])
         prediction_value = int(result_df['prediction'].iloc[0])
         probability_show = 1.0 - probability_no_show
-        
+
+        specialty_group = str(result_df['specialty_group'].iloc[0]) if "specialty_group" in result_df.columns else None
+        threshold = thresholds.get(specialty_group, 0.5) if specialty_group else 0.5
+        probability_no_show_normalized = round(_normalize_probability(probability_no_show, threshold), 4)
+
         result = {
             "prediction": prediction_value,
             "prediction_label": PREDICTION_LABEL_NO_SHOW if prediction_value == 1 else PREDICTION_LABEL_SHOW,
             "probability_show": probability_show,
-            "probability_no_show": probability_no_show
+            "probability_no_show": probability_no_show,
+            "probability_no_show_normalized": probability_no_show_normalized,
         }
-        
+
         # Include specialty_group if available
-        if "specialty_group" in result_df.columns:
-            result["specialty_group"] = str(result_df['specialty_group'].iloc[0])
+        if specialty_group:
+            result["specialty_group"] = specialty_group
         
         logger.info(f"Prediction: {result['prediction_label']} (confidence: {max(probability_show, probability_no_show):.2%})")
         return result
@@ -145,6 +167,10 @@ async def predict_batch(appointments: List[Dict[str, Any]]) -> Dict[str, Any]:
             prediction_value = int(result_df['prediction'].iloc[0])
             probability_show = 1.0 - probability_no_show
 
+            specialty_group = str(result_df['specialty_group'].iloc[0]) if "specialty_group" in result_df.columns else None
+            threshold = thresholds.get(specialty_group, 0.5) if specialty_group else 0.5
+            probability_no_show_normalized = round(_normalize_probability(probability_no_show, threshold), 4)
+
             if prediction_value == 1:
                 predicted_no_show_count += 1
             else:
@@ -156,9 +182,10 @@ async def predict_batch(appointments: List[Dict[str, Any]]) -> Dict[str, Any]:
                 "prediction_label": PREDICTION_LABEL_NO_SHOW if prediction_value == 1 else PREDICTION_LABEL_SHOW,
                 "probability_show": probability_show,
                 "probability_no_show": probability_no_show,
+                "probability_no_show_normalized": probability_no_show_normalized,
             }
-            if "specialty_group" in result_df.columns:
-                result["specialty_group"] = str(result_df['specialty_group'].iloc[0])
+            if specialty_group:
+                result["specialty_group"] = specialty_group
             results.append(result)
 
         logger.info(f"Batch prediction completed. {len(results)} predictions generated.")
@@ -245,19 +272,25 @@ async def predict_range(appointment_data: Dict[str, Any], range_days: int) -> Di
         
         predictions = []
         probabilities_no_show = []
-        
+
+        # Determine threshold once for the whole range (same specialty for all dates)
+        range_specialty_group = str(result_df['specialty_group'].iloc[0]) if "specialty_group" in result_df.columns else None
+        range_threshold = thresholds.get(range_specialty_group, 0.5) if range_specialty_group else 0.5
+
         for idx in range(len(result_df)):
             probability_no_show = float(result_df['probability'].iloc[idx])
             prediction_value = int(result_df['prediction'].iloc[idx])
             probability_show = 1.0 - probability_no_show
-            
+            probability_no_show_normalized = round(_normalize_probability(probability_no_show, range_threshold), 4)
+
             probabilities_no_show.append(probability_no_show)
-            
+
             date_pred = {
                 'date': date_mapping[idx],
                 'prediction': prediction_value,
                 'prediction_label': PREDICTION_LABEL_NO_SHOW if prediction_value == 1 else PREDICTION_LABEL_SHOW,
                 'probability_no_show': probability_no_show,
+                'probability_no_show_normalized': probability_no_show_normalized,
                 'probability_show': probability_show
             }
             predictions.append(date_pred)
