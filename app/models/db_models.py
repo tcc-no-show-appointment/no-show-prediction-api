@@ -32,6 +32,7 @@ class AppointmentPrediction(Base):
     prediction_label = Column(String(20), nullable=True)
     probability_show = Column(Float, nullable=True)
     probability_no_show = Column(Float, nullable=True)
+    probability_no_show_normalized = Column(Float, nullable=True)
     
     # Timestamps
     created_at = Column(DateTime, default=datetime.now, nullable=False)
