@@ -122,7 +122,8 @@ class AppointmentService:
             prediction_class=appointment_data.prediction_class,
             prediction_label=appointment_data.prediction_label,
             probability_show=appointment_data.probability_show,
-            probability_no_show=appointment_data.probability_no_show
+            probability_no_show=appointment_data.probability_no_show,
+            probability_no_show_normalized=appointment_data.probability_no_show_normalized,
         )
         
         db.add(db_appointment)
@@ -132,6 +133,84 @@ class AppointmentService:
         logger.info(f"Appointment created with ID: {db_appointment.appointment_prediction_id}")
         return db_appointment
     
+    @staticmethod
+    def create_appointments_batch(
+        db: Session,
+        appointments_data: list
+    ) -> tuple:
+        """
+        Create multiple appointment records in a single database transaction.
+
+        Args:
+            db: Database session
+            appointments_data: List of AppointmentCreate objects
+
+        Returns:
+            Tuple of (created_appointments list, failed_count int)
+        """
+        logger.info(f"Creating batch of {len(appointments_data)} appointments")
+        created = []
+        failed = 0
+
+        for appointment_data in appointments_data:
+            try:
+                scheduled_at = None
+                appointment_at = None
+
+                if appointment_data.scheduled_at:
+                    if isinstance(appointment_data.scheduled_at, str):
+                        scheduled_at = datetime.fromisoformat(
+                            appointment_data.scheduled_at.replace('Z', '+00:00')
+                        )
+                    else:
+                        scheduled_at = appointment_data.scheduled_at
+
+                if appointment_data.appointment_at:
+                    if isinstance(appointment_data.appointment_at, str):
+                        appointment_at = datetime.fromisoformat(
+                            appointment_data.appointment_at.replace('Z', '+00:00')
+                        )
+                    else:
+                        appointment_at = appointment_data.appointment_at
+
+                db_appointment = AppointmentPrediction(
+                    model_name=appointment_data.model_name,
+                    patient_id=appointment_data.patient_id,
+                    appointment_status=appointment_data.appointment_status,
+                    scheduled_at=scheduled_at,
+                    appointment_at=appointment_at,
+                    patient_age=appointment_data.patient_age,
+                    patient_sex=appointment_data.patient_sex,
+                    patient_city=appointment_data.patient_city,
+                    patient_neighborhood=appointment_data.patient_neighborhood,
+                    insurance_type=appointment_data.insurance_type,
+                    unit_name=appointment_data.unit_name,
+                    unit_address=appointment_data.unit_address,
+                    unit_zipcode=appointment_data.unit_zipcode,
+                    specialty=appointment_data.specialty,
+                    prediction_class=appointment_data.prediction_class,
+                    prediction_label=appointment_data.prediction_label,
+                    probability_show=appointment_data.probability_show,
+                    probability_no_show=appointment_data.probability_no_show,
+                )
+                db.add(db_appointment)
+                created.append(db_appointment)
+            except Exception as e:
+                logger.warning(f"Failed to stage appointment for patient {appointment_data.patient_id}: {e}")
+                failed += 1
+
+        try:
+            db.commit()
+            for appt in created:
+                db.refresh(appt)
+            logger.info(f"Batch created: {len(created)} appointments, {failed} failed")
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Batch commit failed: {e}", exc_info=True)
+            raise
+
+        return created, failed
+
     @staticmethod
     def update_appointment_status(
         db: Session, 
@@ -162,3 +241,44 @@ class AppointmentService:
         
         logger.info(f"Appointment {appointment_id} status updated successfully")
         return db_appointment
+
+    @staticmethod
+    def update_appointments_feedback_batch(
+        db: Session,
+        feedbacks: list
+    ) -> tuple:
+        """
+        Update status for multiple appointments in a single database transaction.
+
+        Args:
+            db: Database session
+            feedbacks: List of FeedbackItem objects (appointment_id + appointment_status)
+
+        Returns:
+            Tuple of (updated_appointments list, failed_count int)
+        """
+        logger.info(f"Batch feedback update for {len(feedbacks)} appointments")
+        updated = []
+        failed = 0
+
+        for item in feedbacks:
+            db_appointment = AppointmentService.get_appointment_by_id(db, item.appointment_id)
+            if not db_appointment:
+                logger.warning(f"Appointment {item.appointment_id} not found, skipping")
+                failed += 1
+                continue
+            db_appointment.appointment_status = item.appointment_status
+            db_appointment.updated_at = datetime.now()
+            updated.append(db_appointment)
+
+        try:
+            db.commit()
+            for appt in updated:
+                db.refresh(appt)
+            logger.info(f"Batch feedback complete: {len(updated)} updated, {failed} failed")
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Batch feedback commit failed: {e}", exc_info=True)
+            raise
+
+        return updated, failed

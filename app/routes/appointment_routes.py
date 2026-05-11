@@ -6,6 +6,10 @@ from app.database import get_db
 from app.services.appointment_service import AppointmentService
 from app.models.schemas import (
     AppointmentCreate,
+    AppointmentBatchCreate,
+    AppointmentBatchResponse,
+    FeedbackBatchRequest,
+    FeedbackBatchResponse,
     AppointmentResponse,
     AppointmentStatusUpdate,
     AppointmentListResponse,
@@ -24,7 +28,7 @@ router = APIRouter()
 )
 async def list_appointments(
     page: int = Query(1, ge=1, description="Page number (starts at 1)"),
-    page_size: int = Query(50, ge=1, le=100, description="Items per page (max 100)"),
+    page_size: int = Query(50, ge=1, le=1000, description="Items per page (max 1000)"),
     patient_id: Optional[str] = Query(None, description="Filter by patient ID"),
     db: Session = Depends(get_db)
 ):
@@ -62,6 +66,49 @@ async def list_appointments(
         
     except Exception as e:
         logger.error(f"Error fetching appointments list: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.post(
+    "/appointments/batch",
+    response_model=AppointmentBatchResponse,
+    status_code=201,
+    responses={
+        400: {"model": ErrorResponse},
+        500: {"model": ErrorResponse}
+    }
+)
+async def create_appointments_batch(
+    batch: AppointmentBatchCreate,
+    db: Session = Depends(get_db)
+):
+    """
+    Create multiple appointments in a single request.
+
+    Processes all appointments in one database transaction, which is
+    significantly more efficient than calling POST /appointments repeatedly.
+
+    **Limits:**
+    - Maximum 250 appointments per request
+    """
+    try:
+        logger.info(f"Creating batch of {len(batch.appointments)} appointments")
+
+        created, failed = AppointmentService.create_appointments_batch(
+            db=db,
+            appointments_data=batch.appointments
+        )
+
+        logger.info(f"Batch complete: {len(created)} created, {failed} failed")
+        return {
+            "total": len(batch.appointments),
+            "created": len(created),
+            "failed": failed,
+            "appointments": created,
+        }
+
+    except Exception as e:
+        logger.error(f"Error in batch appointment creation: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
@@ -165,6 +212,47 @@ async def update_appointment_status(
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"Error updating appointment status: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.patch(
+    "/appointments/feedback/batch",
+    response_model=FeedbackBatchResponse,
+    responses={
+        400: {"model": ErrorResponse},
+        500: {"model": ErrorResponse}
+    }
+)
+async def update_appointments_feedback_batch(
+    batch: FeedbackBatchRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Register attendance feedback for multiple appointments in a single request.
+
+    More efficient than calling PATCH /appointments/feedback/:id repeatedly.
+
+    **Limits:**
+    - Maximum 250 entries per request
+    """
+    try:
+        logger.info(f"Batch feedback update for {len(batch.feedbacks)} appointments")
+
+        updated, failed = AppointmentService.update_appointments_feedback_batch(
+            db=db,
+            feedbacks=batch.feedbacks
+        )
+
+        logger.info(f"Batch feedback complete: {len(updated)} updated, {failed} failed")
+        return {
+            "total": len(batch.feedbacks),
+            "updated": len(updated),
+            "failed": failed,
+            "appointments": updated,
+        }
+
+    except Exception as e:
+        logger.error(f"Error in batch feedback: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error")
 
 

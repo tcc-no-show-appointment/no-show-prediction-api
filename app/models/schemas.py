@@ -52,7 +52,8 @@ class PredictionResponse(BaseModel):
                 "prediction": 0,
                 "prediction_label": "show",
                 "probability_show": 0.75,
-                "probability_no_show": 0.25
+                "probability_no_show": 0.25,
+                "probability_no_show_normalized": 0.25
             }
         }
     )
@@ -61,6 +62,8 @@ class PredictionResponse(BaseModel):
     prediction_label: str
     probability_show: float
     probability_no_show: float
+    probability_no_show_normalized: float
+    threshold: float
 
 
 class ErrorResponse(BaseModel):
@@ -112,7 +115,7 @@ class BatchPredictionRequest(BaseModel):
     appointments: List[PredictionRequest] = Field(
         ..., 
         min_length=1,
-        max_length=1000,  # Reasonable limit for batch processing
+        max_length=250,  # Reasonable limit for batch processing
         description="List of appointments to predict"
     )
 
@@ -150,6 +153,8 @@ class AppointmentPredictionResult(BaseModel):
     prediction_label: str = Field(..., description="Human-readable prediction label")
     probability_show: float = Field(..., description="Probability of patient showing up")
     probability_no_show: float = Field(..., description="Probability of patient not showing up")
+    probability_no_show_normalized: float = Field(..., description="Threshold-normalized no-show probability (0.5 = decision boundary)")
+    threshold: float = Field(..., description="Decision threshold used for this specialty")
 
 
 class BatchPredictionResponse(BaseModel):
@@ -226,7 +231,9 @@ class DatePrediction(BaseModel):
     prediction: int = Field(..., description="Prediction value (0=Show, 1=No-Show)")
     prediction_label: str = Field(..., description="Human-readable prediction label")
     probability_no_show: float = Field(..., description="Probability of patient not showing up (%)")
+    probability_no_show_normalized: float = Field(..., description="Threshold-normalized no-show probability (0.5 = decision boundary)")
     probability_show: float = Field(..., description="Probability of patient showing up (%)")
+    threshold: float = Field(..., description="Decision threshold used for this specialty")
 
 
 class RangePredictionResponse(BaseModel):
@@ -319,6 +326,7 @@ class AppointmentCreate(BaseModel):
     prediction_label: Optional[str] = Field(None, description="Human-readable prediction label")
     probability_show: Optional[float] = Field(None, description="Probability of showing up")
     probability_no_show: Optional[float] = Field(None, description="Probability of not showing up")
+    probability_no_show_normalized: Optional[float] = Field(None, description="Threshold-normalized no-show probability (0.5 = decision boundary)")
 
 
 class AppointmentStatusUpdate(BaseModel):
@@ -388,7 +396,8 @@ class AppointmentResponse(BaseModel):
     prediction_label: Optional[str] = None
     probability_show: Optional[float] = None
     probability_no_show: Optional[float] = None
-    
+    probability_no_show_normalized: Optional[float] = None
+
     # Timestamps
     created_at: datetime
     updated_at: Optional[datetime] = None
@@ -400,3 +409,47 @@ class AppointmentListResponse(BaseModel):
     page: int = Field(..., description="Current page number")
     page_size: int = Field(..., description="Items per page")
     appointments: List[AppointmentResponse] = Field(..., description="List of appointments")
+
+
+class AppointmentBatchCreate(BaseModel):
+    """Schema for creating multiple appointments in a single request"""
+    appointments: List[AppointmentCreate] = Field(
+        ...,
+        min_length=1,
+        max_length=250,
+        description="List of appointments to create (max 250)"
+    )
+
+
+class AppointmentBatchResponse(BaseModel):
+    """Schema for batch appointment creation response"""
+    total: int = Field(..., description="Total appointments submitted")
+    created: int = Field(..., description="Number of appointments successfully created")
+    failed: int = Field(..., description="Number of appointments that failed")
+    appointments: List[AppointmentResponse] = Field(..., description="Successfully created appointments")
+
+
+class FeedbackItem(BaseModel):
+    """A single feedback entry linking an appointment ID to its status"""
+    appointment_id: int = Field(..., description="Appointment prediction ID")
+    appointment_status: str = Field(
+        ..., description="Appointment status: Realizado (showed), Falta (no-show), Cancelado (canceled)"
+    )
+
+
+class FeedbackBatchRequest(BaseModel):
+    """Schema for updating multiple appointment statuses in a single request"""
+    feedbacks: List[FeedbackItem] = Field(
+        ...,
+        min_length=1,
+        max_length=250,
+        description="List of appointment feedback entries (max 250)"
+    )
+
+
+class FeedbackBatchResponse(BaseModel):
+    """Schema for batch feedback response"""
+    total: int = Field(..., description="Total feedbacks submitted")
+    updated: int = Field(..., description="Number of appointments successfully updated")
+    failed: int = Field(..., description="Number of appointments that failed (not found or error)")
+    appointments: List[AppointmentResponse] = Field(..., description="Successfully updated appointments")
