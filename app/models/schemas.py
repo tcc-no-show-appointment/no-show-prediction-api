@@ -63,6 +63,7 @@ class PredictionResponse(BaseModel):
     probability_show: float
     probability_no_show: float
     probability_no_show_normalized: float
+    threshold: float
 
 
 class ErrorResponse(BaseModel):
@@ -153,6 +154,7 @@ class AppointmentPredictionResult(BaseModel):
     probability_show: float = Field(..., description="Probability of patient showing up")
     probability_no_show: float = Field(..., description="Probability of patient not showing up")
     probability_no_show_normalized: float = Field(..., description="Threshold-normalized no-show probability (0.5 = decision boundary)")
+    threshold: float = Field(..., description="Decision threshold used for this specialty")
 
 
 class BatchPredictionResponse(BaseModel):
@@ -231,6 +233,7 @@ class DatePrediction(BaseModel):
     probability_no_show: float = Field(..., description="Probability of patient not showing up (%)")
     probability_no_show_normalized: float = Field(..., description="Threshold-normalized no-show probability (0.5 = decision boundary)")
     probability_show: float = Field(..., description="Probability of patient showing up (%)")
+    threshold: float = Field(..., description="Decision threshold used for this specialty")
 
 
 class RangePredictionResponse(BaseModel):

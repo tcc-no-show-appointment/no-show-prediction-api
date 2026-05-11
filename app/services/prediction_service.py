@@ -113,6 +113,7 @@ async def predict(raw_data: Dict[str, Any]) -> Dict[str, Any]:
             "probability_show": probability_show,
             "probability_no_show": probability_no_show,
             "probability_no_show_normalized": probability_no_show_normalized,
+            "threshold": round(threshold, 4),
         }
 
         # Include specialty_group if available
@@ -183,6 +184,7 @@ async def predict_batch(appointments: List[Dict[str, Any]]) -> Dict[str, Any]:
                 "probability_show": probability_show,
                 "probability_no_show": probability_no_show,
                 "probability_no_show_normalized": probability_no_show_normalized,
+                "threshold": round(threshold, 4),
             }
             if specialty_group:
                 result["specialty_group"] = specialty_group
@@ -291,7 +293,8 @@ async def predict_range(appointment_data: Dict[str, Any], range_days: int) -> Di
                 'prediction_label': PREDICTION_LABEL_NO_SHOW if prediction_value == 1 else PREDICTION_LABEL_SHOW,
                 'probability_no_show': probability_no_show,
                 'probability_no_show_normalized': probability_no_show_normalized,
-                'probability_show': probability_show
+                'probability_show': probability_show,
+                'threshold': round(range_threshold, 4),
             }
             predictions.append(date_pred)
         
