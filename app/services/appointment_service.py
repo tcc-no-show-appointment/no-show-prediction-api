@@ -192,6 +192,7 @@ class AppointmentService:
                     prediction_label=appointment_data.prediction_label,
                     probability_show=appointment_data.probability_show,
                     probability_no_show=appointment_data.probability_no_show,
+                    probability_no_show_normalized=appointment_data.probability_no_show_normalized,
                 )
                 db.add(db_appointment)
                 created.append(db_appointment)
