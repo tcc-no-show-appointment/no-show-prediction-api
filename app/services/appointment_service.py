@@ -124,6 +124,7 @@ class AppointmentService:
             probability_show=appointment_data.probability_show,
             probability_no_show=appointment_data.probability_no_show,
             probability_no_show_normalized=appointment_data.probability_no_show_normalized,
+            threshold=appointment_data.threshold,
         )
         
         db.add(db_appointment)
