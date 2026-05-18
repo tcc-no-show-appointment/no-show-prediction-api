@@ -327,6 +327,7 @@ class AppointmentCreate(BaseModel):
     probability_show: Optional[float] = Field(None, description="Probability of showing up")
     probability_no_show: Optional[float] = Field(None, description="Probability of not showing up")
     probability_no_show_normalized: Optional[float] = Field(None, description="Threshold-normalized no-show probability (0.5 = decision boundary)")
+    threshold: Optional[float] = Field(None, description="Decision threshold used for this specialty at prediction time")
 
 
 class AppointmentStatusUpdate(BaseModel):
@@ -397,6 +398,7 @@ class AppointmentResponse(BaseModel):
     probability_show: Optional[float] = None
     probability_no_show: Optional[float] = None
     probability_no_show_normalized: Optional[float] = None
+    threshold: Optional[float] = None
 
     # Timestamps
     created_at: datetime

@@ -33,6 +33,7 @@ class AppointmentPrediction(Base):
     probability_show = Column(Float, nullable=True)
     probability_no_show = Column(Float, nullable=True)
     probability_no_show_normalized = Column(Float, nullable=True)
+    threshold = Column(Float, nullable=True)
     
     # Timestamps
     created_at = Column(DateTime, default=datetime.now, nullable=False)
