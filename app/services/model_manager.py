@@ -12,6 +12,7 @@ import io
 import joblib
 import numpy as np
 import yaml
+from pathlib import Path
 from typing import Optional, Dict, Any
 import __main__
 from app.services.blob_service import BlobStorageClient
@@ -170,8 +171,34 @@ class ModelManager:
             self._config = yaml.safe_load(config_content)
             logger.info(f"✓ Configuration loaded with keys: {list(self._config.keys())}")
             
-            # ── Step 6: precomputed stats (optional) ───────────────────────
-            logger.info("Step 5/5: Downloading precomputed stats from blob storage...")
+            # ── Step 6: K-Means cluster artifact (noshow_lib v0.4.0) ───────
+            logger.info("Step 5/6: Downloading K-Means cluster artifact from blob storage...")
+            try:
+                cluster_bytes = blob_client.download_cluster_artifact(environment=environment)
+                if cluster_bytes:
+                    artifact_dir = Path(
+                        self._config.get("model_specialty", {}).get("artifact_dir", "models/")
+                    )
+                    artifact_dir.mkdir(parents=True, exist_ok=True)
+                    artifact_path = artifact_dir / "kmeans_cluster_patient.joblib"
+                    artifact_path.write_bytes(cluster_bytes)
+                    logger.info(
+                        f"✓ K-Means cluster artifact saved to {artifact_path} "
+                        f"({len(cluster_bytes) / 1024:.1f} KB)"
+                    )
+                else:
+                    logger.warning(
+                        "K-Means cluster artifact not found in blob storage. "
+                        "cluster_patient feature will be -1 at inference time (degraded accuracy)."
+                    )
+            except Exception as e:
+                logger.warning(
+                    f"Failed to load K-Means cluster artifact: {e}. "
+                    f"cluster_patient will be -1 at inference time."
+                )
+
+            # ── Step 7: precomputed stats (optional) ───────────────────────
+            logger.info("Step 6/6: Downloading precomputed stats from blob storage...")
             try:
                 import pandas as pd
                 from io import BytesIO as _BytesIO
