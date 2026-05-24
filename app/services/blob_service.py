@@ -346,3 +346,38 @@ class BlobStorageClient:
         except Exception as e:
             logger.info(f"Could not download stats parquet from '{blob_path}': {str(e)}")
             return None
+
+    def download_cluster_artifact(
+        self,
+        environment: str = "develop",
+    ) -> Optional[bytes]:
+        """
+        Download the K-Means patient cluster artifact produced by noshow_lib v0.4.0.
+
+        Path: {environment}/artifacts/kmeans_cluster_patient_latest.joblib
+
+        Returns:
+            Raw bytes of the joblib artifact, or None if not found.
+        """
+        blob_path = f"{environment}/artifacts/kmeans_cluster_patient_latest.joblib"
+        try:
+            if not self.blob_service_client:
+                logger.warning("Blob service client not initialized for cluster artifact download")
+                return None
+
+            blob_client = self.blob_service_client.get_blob_client(
+                container=self.container_name, blob=blob_path
+            )
+            data = blob_client.download_blob().readall()
+            logger.info(
+                f"Downloaded K-Means cluster artifact: {blob_path} ({len(data) / 1024:.1f} KB)"
+            )
+            return data
+
+        except AzureError as e:
+            logger.info(f"Cluster artifact not found at '{blob_path}': {str(e)}")
+            return None
+        except Exception as e:
+            logger.info(f"Could not download cluster artifact from '{blob_path}': {str(e)}")
+            return None
+
