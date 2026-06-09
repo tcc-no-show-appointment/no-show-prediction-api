@@ -6,8 +6,11 @@ from app.routes.appointment_routes import router as appointment_router
 from app.services.model_manager import model_manager
 from app.utils.logger import get_logger
 from app.config import config
+from app.database import engine, Base
 
 logger = get_logger(__name__)
+
+Base.metadata.create_all(bind=engine)
 
 
 @asynccontextmanager
